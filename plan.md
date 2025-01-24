@@ -1,3 +1,7 @@
+# Config
+
+- [x] Set up postgres and .env
+
 # Auth, Signup, Login
 
 - [ ] Use JWTs and roles (dentist, supervisor, patient)
