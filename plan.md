@@ -4,6 +4,7 @@
 
 # Auth, Signup, Login
 
+- [x] Create tables for users, roles, permissions and role-permission mappings
 - [ ] Use JWTs and roles (dentist, supervisor, patient)
 - [ ] Username would be phone number (for patients)
 - [ ] supervisors and dentist creds will be in different table??
