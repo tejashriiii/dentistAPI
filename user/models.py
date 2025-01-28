@@ -45,6 +45,13 @@ class RolePermissions(models.Model):
 
 
 class User(models.Model):
+    """
+    id: <UUID> user id
+    role: <UUID> whether doctor, admin or patient
+    phonenumber: <BigInt>
+    password: <String>
+    """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     role = models.ForeignKey(Role, on_delete=models.DO_NOTHING)
     phonenumber = models.BigIntegerField(unique=True)
@@ -55,6 +62,14 @@ class User(models.Model):
 
 
 class Details(models.Model):
+    """
+    id: <UUID> one-to-one key with user_id from User
+    date_of_birth: <Date>
+    first_name: <String>
+    last_name: <String>
+    address: <String>
+    """
+
     id = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     date_of_birth = models.DateField()
     first_name = models.CharField(max_length=25)
@@ -66,6 +81,12 @@ class Details(models.Model):
 
 
 class MedicalCondition(models.Model):
+    """
+    id: <UUID>
+    name: <String>
+    description: <String>
+    """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     name = models.CharField(max_length=25)
     description = models.TextField(blank=True)
@@ -75,6 +96,12 @@ class MedicalCondition(models.Model):
 
 
 class Allergy(models.Model):
+    """
+    id: <UUID>
+    name: <String>
+    description: <String>
+    """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     name = models.CharField(max_length=25)
     description = models.TextField(blank=True)
@@ -84,6 +111,16 @@ class Allergy(models.Model):
 
 
 class MedicalHistory(models.Model):
+    """
+    id: <UUID> (Primary key)
+    user: <UUID> Foreign key from User
+    condition: <UUID> Foreign key from condition
+    recorded:<Date> When did the medical issue happen
+    patient_specific_note: <String>
+    created_at: <DateTime> When the record was created
+    updated_at: <DateTime> When the record was last updated
+    """
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     condition = models.ForeignKey(MedicalCondition, on_delete=models.CASCADE)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
@@ -97,6 +134,16 @@ class MedicalHistory(models.Model):
 
 
 class AllergyHistory(models.Model):
+    """
+    id: <UUID> (Primary key)
+    user: <UUID> Foreign key from User
+    allergy: <UUID> Foreign key from condition
+    recorded:<Date> When did the medical issue happen
+    patient_specific_note: <String>
+    created_at: <DateTime> When the record was created
+    updated_at: <DateTime> When the record was last updated
+    """
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     allergy = models.ForeignKey(Allergy, on_delete=models.CASCADE)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)

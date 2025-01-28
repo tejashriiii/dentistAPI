@@ -1,8 +1,12 @@
 from django.contrib import admin
-from .models import User, Role, RolePermissions, Permission
+from . import models
 
 # Register your models here.
-admin.site.register(User)
-admin.site.register(Role)
-admin.site.register(RolePermissions)
-admin.site.register(Permission)
+admin.site.register(models.User)
+admin.site.register(models.Role)
+admin.site.register(models.RolePermissions)
+admin.site.register(models.Permission)
+admin.site.register(models.Allergy)
+admin.site.register(models.MedicalCondition)
+admin.site.register(models.MedicalHistory)
+admin.site.register(models.AllergyHistory)

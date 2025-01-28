@@ -1,3 +1,7 @@
 Django==5.1.5
 python-dotenv==1.0.1
+bcrypt==4.2.1
 psycopg2[binary]
+django-filter==24.3
+djangorestframework==3.15.2
+markdown=3.7
