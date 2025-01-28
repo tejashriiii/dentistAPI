@@ -1,31 +1,26 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Allergy, MedicalCondition
-from .serializers import AllergySerializer, MedicalConditionSerializer
 
 # from rest_framework.parsers import JSONParser
 
 
-@csrf_exempt
 def allergies(request):
     """
     Returns all the allergies stored in the database
     """
     if request.method == "GET":
-        all_allergies = Allergy.objects.all()
-        serializer = AllergySerializer(all_allergies, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        allergy_list = list(Allergy.objects.values_list("name", flat=True))
+        return JsonResponse({"allergies": allergy_list})
 
 
-@csrf_exempt
 def medical_conditions(request):
     """
     Returns all the medical conditions stored in the database
     """
     if request.method == "GET":
-        all_medical_conditions = MedicalCondition.objects.all()
-        serializer = MedicalConditionSerializer(all_medical_conditions, many=True)
-        return JsonResponse(serializer.data, safe=False)
+        conditions_list = list(MedicalCondition.objects.values_list("name", flat=True))
+        return JsonResponse({"conditions": conditions_list})
 
 
 """
