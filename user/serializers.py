@@ -1,15 +1,15 @@
 from rest_framework import serializers
-from .models import User, Allergy, MedicalCondition
+from . import models
 
 
-class UserSerializer(serializers.ModelSerializer):
+class DetailsSerializer(serializers.ModelSerializer):
     """
-    Serializer for User
+    Serializer for Details
     """
 
     class Meta:
-        model = User
-        fields = ["id", "role", "phonenumber", "password"]
+        model = models.Details
+        exclude = ["id"]
 
 
 class AllergySerializer(serializers.ModelSerializer):
@@ -18,7 +18,7 @@ class AllergySerializer(serializers.ModelSerializer):
     """
 
     class Meta:
-        model = Allergy
+        model = models.Allergy
         fields = ["id", "name", "description"]
 
 
@@ -28,5 +28,5 @@ class MedicalConditionSerializer(serializers.ModelSerializer):
     """
 
     class Meta:
-        model = MedicalCondition
+        model = models.MedicalCondition
         fields = ["id", "name", "description"]

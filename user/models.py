@@ -16,11 +16,20 @@ class Details(models.Model):
     address: <String>
     """
 
+    class GenderChoices(models.TextChoices):
+        MALE = "M"
+        FEMALE = "F"
+        TRANSSEXUAL = "T"
+        OTHER = "O"
+
     id = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     date_of_birth = models.DateField()
     first_name = models.CharField(max_length=25)
     last_name = models.CharField(max_length=25)
     address = models.TextField()
+    gender = models.CharField(
+        max_length=1, choices=GenderChoices.choices, default=GenderChoices.MALE
+    )
 
     class Meta:
         db_table = "patient_details"
