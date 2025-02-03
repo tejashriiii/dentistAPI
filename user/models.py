@@ -109,3 +109,23 @@ class AllergyHistory(models.Model):
 
     class Meta:
         db_table = "allergy_history"
+
+
+class Complaint(models.Model):
+    """
+    id: <UUID> (Primary key)
+    complaint: <UUID> Primary Key
+    complaint: <String> Foreign key from condition
+    date:<Date> appointment is scheduled
+    time: <Time> Time when appointment is scheduled
+    xray: <Int> Tooth number's xray
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    complaint = models.TextField()
+    date = models.DateField()
+    time = models.TimeField()
+    xray = models.IntegerField()
+
+    class Meta:
+        db_table = "complaints"

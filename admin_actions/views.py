@@ -57,3 +57,26 @@ def register_details(request):
         return Response(
             {"message": "details have been registered"}, status=status.HTTP_200_OK
         )
+
+
+@api_view(["POST"])
+@permission_classes((permissions.AllowAny,))
+def save_appointment(request):
+    """
+    Registering appointments for patients
+    Expected JSON
+
+    ```
+    {
+        date: "2025-02-14",
+        time: "06:00",
+        chief_complaint: "tooth-ache",
+        xray: "42",
+    }
+
+    ```
+
+    """
+    if request.method == "POST":
+        pass
+    pass

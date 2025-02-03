@@ -74,6 +74,7 @@ class User(models.Model):
     role = models.ForeignKey(Role, on_delete=models.DO_NOTHING)
     phonenumber = models.BigIntegerField(unique=True)
     password = models.TextField(blank=True)
+    active = models.BooleanField()
 
     class Meta:
         db_table = "credentials"

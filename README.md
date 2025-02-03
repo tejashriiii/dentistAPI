@@ -25,7 +25,12 @@ pip install -r requirements.txt
 ```sh
 python manage.py makemigrations
 ```
-
+```sh
+python manage.py makemigrations user
+```
+```sh
+python manage.py makemigrations authentication
+```
 6. Migrate
 
 ```sh

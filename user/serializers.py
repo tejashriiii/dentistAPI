@@ -12,6 +12,14 @@ class DetailsSerializer(serializers.ModelSerializer):
         exclude = ["id"]
 
 
+class AppointmentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Appointments
+    """
+
+    pass
+
+
 class AllergySerializer(serializers.ModelSerializer):
     """
     Serializer for Allergy
