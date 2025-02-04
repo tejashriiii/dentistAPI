@@ -7,7 +7,7 @@ import uuid
 
 class AuthenticationTests(APITestCase):
     def setUp(self):
-        self.my_pateint = models.Role.objects.create(name="patient")
+        self.my_patient = models.Role.objects.create(name="patient")
         self.my_dentist = models.Role.objects.create(name="dentist")
         self.my_admin = models.Role.objects.create(name="admin")
 

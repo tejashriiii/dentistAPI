@@ -12,29 +12,13 @@ class DetailsSerializer(serializers.ModelSerializer):
         exclude = ["id"]
 
 
-class AppointmentSerializer(serializers.ModelSerializer):
+class ComplaintSerializer(serializers.ModelSerializer):
     """
     Serializer for Appointments
     """
 
+    class Meta:
+        model = models.Complaint
+        exclude = ["id"]
+
     pass
-
-
-class AllergySerializer(serializers.ModelSerializer):
-    """
-    Serializer for Allergy
-    """
-
-    class Meta:
-        model = models.Allergy
-        fields = ["id", "name", "description"]
-
-
-class MedicalConditionSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Medical Condition
-    """
-
-    class Meta:
-        model = models.MedicalCondition
-        fields = ["id", "name", "description"]

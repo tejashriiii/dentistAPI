@@ -8,3 +8,4 @@ markdown==3.7
 djangorestframework-simplejwt==5.4.0
 django-cors-headers == 4.6.0
 django-extensions==3.2.3
+pytz==2025.1

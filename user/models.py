@@ -1,6 +1,7 @@
 from django.db import models
 from authentication.models import User
 import uuid
+from django.utils import timezone
 
 
 # ==============================NOTE====================================
@@ -14,6 +15,9 @@ class Details(models.Model):
     first_name: <String>
     last_name: <String>
     address: <String>
+    gender: <M | F | T | O>
+    allergies: <String but list inside>
+    illnesses: <String but list inside>
     """
 
     class GenderChoices(models.TextChoices):
@@ -30,85 +34,11 @@ class Details(models.Model):
     gender = models.CharField(
         max_length=1, choices=GenderChoices.choices, default=GenderChoices.MALE
     )
+    allergies = models.TextField(default="[]")
+    illnesses = models.TextField(default="[]")
 
     class Meta:
         db_table = "patient_details"
-
-
-class MedicalCondition(models.Model):
-    """
-    id: <UUID>
-    name: <String>
-    description: <String>
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    name = models.CharField(max_length=25)
-    description = models.TextField(blank=True)
-
-    class Meta:
-        db_table = "medical_conditions"
-
-
-class Allergy(models.Model):
-    """
-    id: <UUID>
-    name: <String>
-    description: <String>
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    name = models.CharField(max_length=25)
-    description = models.TextField(blank=True)
-
-    class Meta:
-        db_table = "allergies"
-
-
-class MedicalHistory(models.Model):
-    """
-    id: <UUID> (Primary key)
-    user: <UUID> Foreign key from User
-    condition: <UUID> Foreign key from condition
-    recorded:<Date> When did the medical issue happen
-    patient_specific_note: <String>
-    created_at: <DateTime> When the record was created
-    updated_at: <DateTime> When the record was last updated
-    """
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    condition = models.ForeignKey(MedicalCondition, on_delete=models.CASCADE)
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    recorded = models.DateField()
-    patient_specific_note = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "medical_history"
-
-
-class AllergyHistory(models.Model):
-    """
-    id: <UUID> (Primary key)
-    user: <UUID> Foreign key from User
-    allergy: <UUID> Foreign key from condition
-    recorded:<Date> When did the medical issue happen
-    patient_specific_note: <String>
-    created_at: <DateTime> When the record was created
-    updated_at: <DateTime> When the record was last updated
-    """
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    allergy = models.ForeignKey(Allergy, on_delete=models.CASCADE)
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    recorded = models.DateField()
-    patient_specific_note = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "allergy_history"
 
 
 class Complaint(models.Model):
