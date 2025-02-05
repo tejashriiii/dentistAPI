@@ -1,7 +1,6 @@
 from django.db import models
 from authentication.models import User
 import uuid
-from django.utils import timezone
 
 
 # ==============================NOTE====================================
@@ -12,8 +11,6 @@ class Details(models.Model):
     """
     id: <UUID> one-to-one key with user_id from User
     date_of_birth: <Date>
-    first_name: <String>
-    last_name: <String>
     address: <String>
     gender: <M | F | T | O>
     allergies: <String but list inside>
@@ -28,14 +25,12 @@ class Details(models.Model):
 
     id = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
     date_of_birth = models.DateField()
-    first_name = models.CharField(max_length=25)
-    last_name = models.CharField(max_length=25)
     address = models.TextField()
     gender = models.CharField(
         max_length=1, choices=GenderChoices.choices, default=GenderChoices.MALE
     )
-    allergies = models.TextField(default="[]")
-    illnesses = models.TextField(default="[]")
+    allergies = models.TextField(default="")
+    illnesses = models.TextField(default="")
 
     class Meta:
         db_table = "patient_details"
@@ -44,18 +39,19 @@ class Details(models.Model):
 class Complaint(models.Model):
     """
     id: <UUID> (Primary key)
-    complaint: <UUID> Primary Key
-    complaint: <String> Foreign key from condition
+    user: <UUID> (Foreign Key for User)
+    complaint: <String> Description of com
     date:<Date> appointment is scheduled
     time: <Time> Time when appointment is scheduled
     xray: <Int> Tooth number's xray
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     complaint = models.TextField()
     date = models.DateField()
     time = models.TimeField()
-    xray = models.IntegerField()
+    xray = models.IntegerField(blank=True)
 
     class Meta:
         db_table = "complaints"

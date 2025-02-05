@@ -17,5 +17,6 @@ class CredentialSerializer(serializers.Serializer):
     Serializer for credentials during signup and login
     """
 
+    name = serializers.CharField()
     phonenumber = serializers.IntegerField()
     password = serializers.CharField()

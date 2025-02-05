@@ -9,7 +9,7 @@ class DetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Details
-        exclude = ["id"]
+        exclude = ["id", "allergies", "illnesses"]
 
 
 class ComplaintSerializer(serializers.ModelSerializer):
@@ -19,6 +19,6 @@ class ComplaintSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Complaint
-        exclude = ["id"]
+        exclude = ["id", "user"]
 
     pass

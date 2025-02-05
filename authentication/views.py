@@ -1,4 +1,3 @@
-# from authentication.models import User
 from authentication.serializers import CredentialSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -6,6 +5,7 @@ from rest_framework import permissions
 from rest_framework import status
 from . import models
 from . import validation
+from . import jsonwebtokens
 import bcrypt
 import os
 
@@ -61,18 +61,18 @@ def signup(request):
         # Case 3
         try:
             user_object = models.User.objects.get(
-                phonenumber=serializer.data["phonenumber"]
+                phonenumber=serializer.data["phonenumber"], name=serializer.data["name"]
             )
         except models.User.DoesNotExist:
             return Response(
-                {"error": "Phonenumber is not registered by admin"},
+                {"error": "User is not registered by admin"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
         # Case 4
         if user_object.password != "":
             return Response(
-                {"error": "Password already set for this phonenumber"},
+                {"error": "Password already set for this user"},
                 status=status.HTTP_409_CONFLICT,
             )
 
@@ -113,6 +113,7 @@ def login(request):
     Expected JSON:\n
     `{
         "phonenumber": "7880589921",
+        "name": "John Doe",
         "password": "A1plain_text_password"
     }`
     """
@@ -135,9 +136,9 @@ def login(request):
 
         # Case 3
         try:
-            stored_password: str = models.User.objects.get(
-                phonenumber=serializer.data["phonenumber"]
-            ).password
+            stored_user: str = models.User.objects.get(
+                phonenumber=serializer.data["phonenumber"], name=serializer.data["name"]
+            )
 
         except models.User.DoesNotExist:
             return Response(
@@ -145,8 +146,9 @@ def login(request):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        print("role: ", stored_user.role)
         # Case 4
-        if stored_password == "":
+        if stored_user.password == "":
             return Response(
                 {"error": "You haven't set up your password. Signup first!"},
                 status=status.HTTP_409_CONFLICT,
@@ -154,14 +156,19 @@ def login(request):
 
         # Case 5
         password: bytes = bytes(serializer.data["password"], "utf-8")
-        hashed_password: bytes = bytes(stored_password, "utf-8")
+        hashed_password: bytes = bytes(stored_user.password, "utf-8")
 
         if not bcrypt.checkpw(password, hashed_password):
             return Response(
                 {"error": "Incorrect password"}, status=status.HTTP_409_CONFLICT
             )
         # Case 6
-        return Response({"token": "should_be_a_token"}, status=status.HTTP_201_CREATED)
+        print("role: ", stored_user.role)
+        jwt = jsonwebtokens.create_jwt(
+            role=stored_user.role, phonenumber=serializer.data["phonenumber"]
+        )
+
+        return Response({"token": jwt}, status=status.HTTP_201_CREATED)
 
 
 # TODO: add dentist (only dentist perm)
