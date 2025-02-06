@@ -40,18 +40,16 @@ class Complaint(models.Model):
     """
     id: <UUID> (Primary key)
     user: <UUID> (Foreign Key for User)
-    complaint: <String> Description of com
-    date:<Date> appointment is scheduled
-    time: <Time> Time when appointment is scheduled
-    xray: <Int> Tooth number's xray
+    complaint: <String> Description of complaint
+    date:<Date> when complaint was registered
+    time: <Time> when complaint was registered
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     complaint = models.TextField()
-    date = models.DateField()
-    time = models.TimeField()
-    xray = models.IntegerField(blank=True)
+    date = models.DateField(auto_now=True)
+    time = models.TimeField(auto_now=True, blank=True)
 
     class Meta:
         db_table = "complaints"

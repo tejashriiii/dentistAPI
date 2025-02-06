@@ -7,6 +7,7 @@ from user.models import Complaint, Details
 from user.serializers import DetailsSerializer, ComplaintSerializer
 import authentication.validation as validation
 import authentication.jsonwebtokens as jsonwebtokens
+from jwt.exceptions import DecodeError
 from django.db import IntegrityError
 
 
@@ -28,15 +29,24 @@ def details(request):
     - create details object first
     """
     if request.method == "POST":
-        # get roleid
-        token = jsonwebtokens.decode_jwt(request.headers["Authorization"].split(" ")[1])
-        phonenumber = request.data.get("phonenumber")
+        # Make sure user is admin
+        try:
+            token = jsonwebtokens.decode_jwt(
+                request.headers["Authorization"].split(" ")[1]
+            )
+        except DecodeError:
+            return Response(
+                {"error": "Invalid JWT"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         if token.get("role") != "admin":
             return Response(
                 {"error": "Only admin access allowed"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+
         # Case 2
+        phonenumber = request.data.get("phonenumber")
         is_valid_phonenumber: validation.FieldValidity = (
             validation.validate_phonenumber(int(phonenumber))
         )
@@ -54,7 +64,6 @@ def details(request):
             password="",
         )
 
-        print(request.data.get("details"))
         serializer = DetailsSerializer(data=request.data.get("details"))
         if not serializer.is_valid():
             return Response(
@@ -84,24 +93,53 @@ def details(request):
 @permission_classes((permissions.AllowAny,))
 def complaints(request):
     """
-    Registering appointments for patients
+    Registering complaints/appointments for patients
+
+    Flow:
+    1. Check if invoker is admin
+        - 401 UNAUTHORIZED: Invalid JWT
+        - 401 UNAUTHORIZED: Not admin
+    2. Validate phonenumber
+        - 400 BAD REQUEST: invalid phonenumber
+    3. Validate complaint
+        - 400 BAD REQUEST: invalid complaint details
+    4. Fetch user_id
+        - 404 NOT FOUND: User not registered
+    5. Register complaint
+
     Expected JSON
 
         {
             "phonenumber": "7880589921",
-            "complaint": {
-                "date": "2025-02-14",
-                "time": "06:00",
+            complaint: {
+                "name": "John Doe",
                 "chief_complaint": "tooth-ache",
-                "xray": "42"
             }
         }
 
 
     """
     if request.method == "POST":
+        # Make sure user is admin
+        try:
+            token = jsonwebtokens.decode_jwt(
+                request.headers["Authorization"].split(" ")[1]
+            )
+        except DecodeError:
+            return Response(
+                {"error": "Invalid JWT"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if token.get("role") != "admin":
+            return Response(
+                {"error": "Only admin access allowed"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # Validate phonenumber
+        phonenumber = request.data.get("phonenumber")
         is_valid_phonenumber: validation.FieldValidity = (
-            validation.validate_phonenumber(request.data.get("phonenumber"))
+            validation.validate_phonenumber(int(phonenumber))
         )
         if not is_valid_phonenumber["valid"]:
             return Response(
@@ -109,29 +147,35 @@ def complaints(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Get user
-        try:
-            user = auth.User.objects.get(phonenumber=request.data.get("phonenumber"))
-        except auth.User.DoesNotExist:
-            return Response(
-                {"error": "Phonenumber does not belong to registered user"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        print(request.data)
+        # Validate complaint
         serializer = ComplaintSerializer(data=request.data.get("complaint"))
         if not serializer.is_valid():
             return Response(
                 serializer.error_messages, status=status.HTTP_400_BAD_REQUEST
             )
 
-        # TODO: add validation for not having time clashes
+        # Fetch user_id
+        try:
+            user = auth.User.objects.get(
+                phonenumber=phonenumber, name=serializer.data["name"]
+            )
+        except auth.User.DoesNotExist:
+            return Response(
+                {"error": "User is not registered. Register them please"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Register Complaint
+        # REMEMBER: Time is being saved as GMT(UTC)
         Complaint.objects.create(
             user=user,
-            time=serializer.data["time"],
-            date=serializer.data["date"],
-            xray=serializer.data["xray"],
-            chief_complaint=serializer.data["chief_complaint"],
+            complaint=serializer.data["chief_complaint"],
         )
+
+        # REMEMBER: When complaint is diagnosed sitting is done, billing is done
+        # set user's "active" to False So that we can fetch people who are still
+        # "active" the next day for doctor, incase someone is left out
+        # Or some followup has been delayed.
+        # Also whenever the billing is done (flow ends), update the day in the database for their complaint
 
         return Response({"message": "complaint registered"}, status=status.HTTP_200_OK)

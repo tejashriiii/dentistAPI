@@ -12,13 +12,11 @@ class DetailsSerializer(serializers.ModelSerializer):
         exclude = ["id", "allergies", "illnesses"]
 
 
-class ComplaintSerializer(serializers.ModelSerializer):
+class ComplaintSerializer(serializers.Serializer):
     """
-    Serializer for Appointments
+    chief_complaint: <String> Description of complaint
+    name: <String> Name of the person
     """
 
-    class Meta:
-        model = models.Complaint
-        exclude = ["id", "user"]
-
-    pass
+    chief_complaint = serializers.CharField()
+    name = serializers.CharField()
