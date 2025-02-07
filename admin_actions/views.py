@@ -9,6 +9,8 @@ import authentication.validation as validation
 import authentication.jsonwebtokens as jsonwebtokens
 from jwt.exceptions import DecodeError
 from django.db import IntegrityError
+import datetime
+import user.utils as user_utils
 
 
 # Create your views here.
@@ -89,10 +91,23 @@ def details(request):
         )
 
 
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 @permission_classes((permissions.AllowAny,))
 def complaints(request):
     """
+    GET REQUEST:
+    Get the list of all active complaints (for that day)
+    Expected JSON:
+
+        {
+            name: <String>,
+            phonenumber,
+            time:,
+            age: ,
+            complaint
+        }
+
+    POST REQUEST:
     Registering complaints/appointments for patients
 
     Flow:
@@ -119,6 +134,27 @@ def complaints(request):
 
 
     """
+    if request.method == "GET":
+        # Fetch active patients
+        all_complaints = Complaint.objects.select_related(
+            "user", "user__details"
+        ).filter(date=datetime.datetime.now().date())
+        print(all_complaints)
+
+        complaints = []
+        for complaint in all_complaints:
+            complaints.append(
+                {
+                    "name": complaint.user.name,
+                    "age": user_utils.get_age(complaint.user.details.date_of_birth),
+                    "phonenumber": complaint.user.phonenumber,
+                    "time": user_utils.get_IST(complaint.time),
+                    "complaint": complaint.complaint,
+                }
+            )
+
+        return Response({"complaints": complaints}, status=status.HTTP_200_OK)
+
     if request.method == "POST":
         # Make sure user is admin
         try:
