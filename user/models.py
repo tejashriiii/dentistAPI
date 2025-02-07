@@ -53,3 +53,20 @@ class Complaint(models.Model):
 
     class Meta:
         db_table = "complaints"
+
+
+class Diagnosis(models.Model):
+    """
+    id: <UUID> (Primary key)
+    complaint: <UUID> (Foreign Key for User)
+    tooth_number:<Int> when complaint was registered
+    diagnosis: <String> Description of diagnosis
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE)
+    tooth_number = models.IntegerField()
+    diagnosis = models.TextField()
+
+    class Meta:
+        db_table = "diagnosis"

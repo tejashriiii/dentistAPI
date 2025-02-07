@@ -96,7 +96,7 @@ def details(request):
 def complaints(request):
     """
     GET REQUEST:
-    Get the list of all active complaints (for that day)
+    1. FOR DASHBOARD: Get the list of all active complaints (for that day)
     Expected JSON:
 
         {
@@ -106,6 +106,8 @@ def complaints(request):
             age: ,
             complaint
         }
+
+    2. FOR LIST:
 
     POST REQUEST:
     Registering complaints/appointments for patients
@@ -134,12 +136,24 @@ def complaints(request):
 
 
     """
+    try:
+        token = jsonwebtokens.decode_jwt(request.headers["Authorization"].split(" ")[1])
+    except DecodeError:
+        return Response(
+            {"error": "Invalid JWT"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+    if token.get("role") != "admin" and token.get("role") != "dentist":
+        return Response(
+            {"error": "Only admin access allowed"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
     if request.method == "GET":
         # Fetch active patients
         all_complaints = Complaint.objects.select_related(
             "user", "user__details"
         ).filter(date=datetime.datetime.now().date())
-        print(all_complaints)
 
         complaints = []
         for complaint in all_complaints:
@@ -157,20 +171,6 @@ def complaints(request):
 
     if request.method == "POST":
         # Make sure user is admin
-        try:
-            token = jsonwebtokens.decode_jwt(
-                request.headers["Authorization"].split(" ")[1]
-            )
-        except DecodeError:
-            return Response(
-                {"error": "Invalid JWT"},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-        if token.get("role") != "admin":
-            return Response(
-                {"error": "Only admin access allowed"},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
 
         # Validate phonenumber
         phonenumber = request.data.get("phonenumber")
