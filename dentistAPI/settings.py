@@ -161,3 +161,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5174",  # React app URL
     # Add other allowed origins as needed
 ]
+
+WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL")
+WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
