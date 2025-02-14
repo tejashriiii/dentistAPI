@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_extensions",
     "admin_actions",
+    "doctor",
+    "messaging",
 ]
 
 MIDDLEWARE = [

@@ -65,8 +65,28 @@ class Diagnosis(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE)
-    tooth_number = models.IntegerField()
+    tooth_number = models.TextField(blank=True)
+    # Incase multiple teeth with same diagnosis operated together
     diagnosis = models.TextField()
 
     class Meta:
         db_table = "diagnosis"
+
+
+class FollowUp(models.Model):
+    """
+    id: <UUID> (Primary key)
+    diagnosis: <UUID> (Foreign Key for Diagnosis)
+    description:<String> What the dentist ended up doing in this sitting
+    date: <Date> When followup is scheduled
+    time: <Time> When followup is scheduled
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    diagnosis = models.ForeignKey(Diagnosis, on_delete=models.CASCADE)
+    date = models.DateField()
+    time = models.TimeField()
+    description = models.TextField()
+
+    class Meta:
+        db_table = "followups"

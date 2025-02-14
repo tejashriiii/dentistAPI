@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from . import models
 import authentication.jsonwebtokens as jsonwebtokens
-import datetime
 from jwt.exceptions import DecodeError
 
 
@@ -26,8 +25,7 @@ def patients(request, phonenumber=None, active=None):
             return Response({"patient": patient}, status=status.HTTP_200_OK)
 
     try:
-        token = jsonwebtokens.decode_jwt(
-            request.headers["Authorization"].split(" ")[1])
+        token = jsonwebtokens.decode_jwt(request.headers["Authorization"].split(" ")[1])
     except DecodeError:
         return Response(
             {"error": "Invalid JWT"},

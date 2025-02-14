@@ -25,5 +25,5 @@ urlpatterns = [
     path("auth/", include("authentication.urls")),
     path("ad/", include("admin_actions.urls")),
     path("m/", include("messaging.urls")),
+    path("doc/", include("doctor.urls")),
 ]
-
