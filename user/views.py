@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from . import models
 import authentication.jsonwebtokens as jsonwebtokens
-from jwt.exceptions import DecodeError
 
 
 @api_view(["GET"])
@@ -24,19 +23,16 @@ def patients(request, phonenumber=None, active=None):
             ).values()
             return Response({"patient": patient}, status=status.HTTP_200_OK)
 
-    try:
-        token = jsonwebtokens.decode_jwt(request.headers["Authorization"].split(" ")[1])
-    except DecodeError:
+    # JWT authentication
+    token, error = jsonwebtokens.decode_jwt(
+        request.headers["Authorization"].split(" ")[1], set(["dentist", "admin"])
+    )
+    if error:
         return Response(
-            {"error": "Invalid JWT"},
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
-    if token.get("role") != "admin" and token.get("dentist") != "doctor":
-        return Response(
-            {"error": "Only admin access allowed"},
+            {"error": error},
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
-        # Fetch all patients
-        all_patients = models.Details.objects.all().values_list()
-        return Response({"patients": all_patients}, status=status.HTTP_200_OK)
+    # Fetch all patients
+    all_patients = models.Details.objects.all().values_list()
+    return Response({"patients": all_patients}, status=status.HTTP_200_OK)

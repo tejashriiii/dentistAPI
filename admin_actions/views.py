@@ -32,18 +32,12 @@ def details(request):
     """
     if request.method == "POST":
         # Make sure user is admin
-        try:
-            token = jsonwebtokens.decode_jwt(
-                request.headers["Authorization"].split(" ")[1]
-            )
-        except DecodeError:
+        token, error = jsonwebtokens.decode_jwt(
+            request.headers["Authorization"].split(" ")[1], set(["admin"])
+        )
+        if error:
             return Response(
-                {"error": "Invalid JWT"},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-        if token.get("role") != "admin":
-            return Response(
-                {"error": "Only admin access allowed"},
+                {"error": error},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -136,16 +130,13 @@ def complaints(request):
 
 
     """
-    try:
-        token = jsonwebtokens.decode_jwt(request.headers["Authorization"].split(" ")[1])
-    except DecodeError:
+    # Make sure user is admin or dentist
+    token, error = jsonwebtokens.decode_jwt(
+        request.headers["Authorization"].split(" ")[1], set(["admin", "dentist"])
+    )
+    if error:
         return Response(
-            {"error": "Invalid JWT"},
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
-    if token.get("role") != "admin" and token.get("role") != "dentist":
-        return Response(
-            {"error": "Only admin access allowed"},
+            {"error": error},
             status=status.HTTP_401_UNAUTHORIZED,
         )
 

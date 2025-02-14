@@ -146,7 +146,6 @@ def login(request):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        print("role: ", stored_user.role)
         # Case 4
         if stored_user.password == "":
             return Response(
@@ -163,9 +162,10 @@ def login(request):
                 {"error": "Incorrect password"}, status=status.HTTP_409_CONFLICT
             )
         # Case 6
-        print("role: ", stored_user.role)
         jwt = jsonwebtokens.create_jwt(
-            role=stored_user.role, phonenumber=serializer.data["phonenumber"]
+            role=stored_user.role,
+            phonenumber=serializer.data["phonenumber"],
+            name=serializer.data["name"],
         )
 
         return Response({"token": jwt}, status=status.HTTP_201_CREATED)
@@ -173,7 +173,6 @@ def login(request):
 
 # TODO: add dentist (only dentist perm)
 # TODO: add admin (only dentist perm)
-# TODO: add JWT with "role" as a claim (1 week expiration)
 # TODO: change password endpoint
 # TODO: change phonenumber endpoint
 # TODO: maybe add refresh tokens
