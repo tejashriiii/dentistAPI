@@ -34,3 +34,8 @@ class User(models.Model):
 
     class Meta:
         db_table = "credentials"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "phonenumber"], name="unique_phone+name"
+            )
+        ]

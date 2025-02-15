@@ -5,6 +5,7 @@ from django.conf import settings
 import json
 import urllib.request
 
+
 @api_view(["POST"])
 @permission_classes((permissions.AllowAny,))
 def send_whatsapp_message(request):
@@ -18,18 +19,23 @@ def send_whatsapp_message(request):
         language_code = request.data.get("language_code", "en_US")
 
         if not phone_number:
-            return Response({"error": "Phone number is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Phone number is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # WhatsApp API payload
-        payload = json.dumps({
-            "messaging_product": "whatsapp",
-            "to": phone_number,
-            "type": "template",
-            "template": {
-                "name": template_name,
-                "language": {"code": language_code},
+        payload = json.dumps(
+            {
+                "messaging_product": "whatsapp",
+                "to": phone_number,
+                "type": "template",
+                "template": {
+                    "name": template_name,
+                    "language": {"code": language_code},
+                },
             }
-        }).encode("utf-8")
+        ).encode("utf-8")
 
         # Headers
         headers = {
@@ -38,7 +44,9 @@ def send_whatsapp_message(request):
         }
 
         # Create API request
-        req = urllib.request.Request(settings.WHATSAPP_API_URL, data=payload, headers=headers, method="POST")
+        req = urllib.request.Request(
+            settings.WHATSAPP_API_URL, data=payload, headers=headers, method="POST"
+        )
 
         # Send API request
         with urllib.request.urlopen(req) as response:

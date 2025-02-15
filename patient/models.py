@@ -29,8 +29,8 @@ class Details(models.Model):
     gender = models.CharField(
         max_length=1, choices=GenderChoices.choices, default=GenderChoices.MALE
     )
-    allergies = models.TextField(default="")
-    illnesses = models.TextField(default="")
+    allergies = models.TextField(default="", blank=True)
+    illnesses = models.TextField(default="", blank=True)
 
     class Meta:
         db_table = "patient_details"
@@ -76,17 +76,19 @@ class Diagnosis(models.Model):
 class FollowUp(models.Model):
     """
     id: <UUID> (Primary key)
-    diagnosis: <UUID> (Foreign Key for Diagnosis)
+    complaint: <UUID> (Foreign Key for Complaint)
     description:<String> What the dentist ended up doing in this sitting
     date: <Date> When followup is scheduled
     time: <Time> When followup is scheduled
+    completed: <Bool> Whether sitting has been completed or not
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    diagnosis = models.ForeignKey(Diagnosis, on_delete=models.CASCADE)
+    complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE)
     date = models.DateField()
     time = models.TimeField()
     description = models.TextField()
+    completed = models.BooleanField()
 
     class Meta:
         db_table = "followups"

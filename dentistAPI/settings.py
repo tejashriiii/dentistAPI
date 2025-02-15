@@ -41,13 +41,12 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-    "user",
     "authentication",
     "corsheaders",
     "django_extensions",
-    "admin_actions",
     "doctor",
     "messaging",
+    "patient",
 ]
 
 MIDDLEWARE = [
@@ -140,7 +139,7 @@ PASSWORD_HASHERS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Kolkata"
 
 USE_I18N = True
 

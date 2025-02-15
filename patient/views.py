@@ -2,18 +2,49 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework import status
-from authentication import models as auth
-from user.models import Complaint, Details
-from user.serializers import DetailsSerializer, ComplaintSerializer
-import authentication.validation as validation
+from . import models
 import authentication.jsonwebtokens as jsonwebtokens
-from jwt.exceptions import DecodeError
+from authentication import models as auth
+from .models import Complaint, Details
+from .serializers import DetailsSerializer, ComplaintSerializer
+import authentication.validation as validation
 from django.db import IntegrityError
 import datetime
-import user.utils as user_utils
+from .utils import get_age
 
 
-# Create your views here.
+@api_view(["GET"])
+@permission_classes((permissions.AllowAny,))
+def patients(request, phonenumber=None, active=None):
+    """
+    1. Retrieve single patient
+    2. Retrieve many patients
+    """
+    # Make sure user is admin or doctor
+
+    if request.method == "GET":
+        # Fetch single patient
+        if phonenumber:
+            patient = models.Details.objects.filter(
+                id__phonenumber=phonenumber
+            ).values()
+            return Response({"patient": patient}, status=status.HTTP_200_OK)
+
+    # JWT authentication
+    token, error = jsonwebtokens.decode_jwt(
+        request.headers["Authorization"].split(" ")[1], set(["dentist", "admin"])
+    )
+    if error:
+        return Response(
+            {"error": error},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    # Fetch all patients
+    all_patients = models.Details.objects.all().values_list()
+    return Response({"patients": all_patients}, status=status.HTTP_200_OK)
+
+
 @api_view(["POST"])
 @permission_classes((permissions.AllowAny,))
 def details(request):
@@ -53,12 +84,18 @@ def details(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user_object = auth.User.objects.create(
-            phonenumber=phonenumber,
-            name=request.data.get("details").get("name"),
-            role="patient",
-            password="",
-        )
+        try:
+            user_object = auth.User.objects.create(
+                phonenumber=phonenumber,
+                name=request.data.get("details").get("name"),
+                role="patient",
+                password="",
+            )
+        except IntegrityError:
+            return Response(
+                {"error": "Account exists for this name and phonenumber"},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         serializer = DetailsSerializer(data=request.data.get("details"))
         if not serializer.is_valid():
@@ -66,18 +103,12 @@ def details(request):
                 serializer.error_messages, status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            Details.objects.create(
-                id=user_object,
-                date_of_birth=serializer.data["date_of_birth"],
-                address=serializer.data["address"],
-                gender=serializer.data["gender"],
-            )
-        except IntegrityError:
-            return Response(
-                {"error": "Account exists for this name and phonenumber"},
-                status=status.HTTP_409_CONFLICT,
-            )
+        Details.objects.create(
+            id=user_object,
+            date_of_birth=serializer.data["date_of_birth"],
+            address=serializer.data["address"],
+            gender=serializer.data["gender"],
+        )
 
         # get role
         return Response(
@@ -151,9 +182,9 @@ def complaints(request):
             complaints.append(
                 {
                     "name": complaint.user.name,
-                    "age": user_utils.get_age(complaint.user.details.date_of_birth),
+                    "age": get_age(complaint.user.details.date_of_birth),
                     "phonenumber": complaint.user.phonenumber,
-                    "time": user_utils.get_IST(complaint.time),
+                    "time": complaint.time,
                     "complaint": complaint.complaint,
                 }
             )
@@ -161,8 +192,6 @@ def complaints(request):
         return Response({"complaints": complaints}, status=status.HTTP_200_OK)
 
     if request.method == "POST":
-        # Make sure user is admin
-
         # Validate phonenumber
         phonenumber = request.data.get("phonenumber")
         is_valid_phonenumber: validation.FieldValidity = (
