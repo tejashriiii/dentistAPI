@@ -15,6 +15,9 @@ class Details(models.Model):
     gender: <M | F | T | O>
     allergies: <String but list inside>
     illnesses: <String but list inside>
+    smoking: <Bool>
+    drinking: <Bool>
+    tobacco: <Bool>
     """
 
     class GenderChoices(models.TextChoices):
@@ -31,6 +34,9 @@ class Details(models.Model):
     )
     allergies = models.TextField(default="", blank=True)
     illnesses = models.TextField(default="", blank=True)
+    smoking = models.BooleanField(default=False)
+    drinking = models.BooleanField(default=False)
+    tobacco = models.BooleanField(default=False)
 
     class Meta:
         db_table = "patient_details"
@@ -65,9 +71,9 @@ class Diagnosis(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE)
-    tooth_number = models.TextField(blank=True)
+    tooth_number = models.TextField(blank=True, max_length=25)
     # Incase multiple teeth with same diagnosis operated together
-    diagnosis = models.TextField()
+    diagnosis = models.TextField(max_length=50)
 
     class Meta:
         db_table = "diagnosis"
@@ -77,7 +83,8 @@ class FollowUp(models.Model):
     """
     id: <UUID> (Primary key)
     complaint: <UUID> (Foreign Key for Complaint)
-    description:<String> What the dentist ended up doing in this sitting
+    title:<String> The name of followup that patient sees
+    description:<String> What the dentist ended up doing in this sitting (private)
     date: <Date> When followup is scheduled
     time: <Time> When followup is scheduled
     completed: <Bool> Whether sitting has been completed or not
@@ -86,8 +93,9 @@ class FollowUp(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE)
     date = models.DateField()
-    time = models.TimeField()
-    description = models.TextField()
+    time = models.TimeField(null=True, blank=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
     completed = models.BooleanField()
 
     class Meta:

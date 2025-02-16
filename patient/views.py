@@ -2,15 +2,15 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework import status
-from . import models
-import authentication.jsonwebtokens as jsonwebtokens
-from authentication import models as auth
-from .models import Complaint, Details
-from .serializers import DetailsSerializer, ComplaintSerializer
-import authentication.validation as validation
 from django.db import IntegrityError
 import datetime
-from .utils import get_age
+from authentication import models as auth
+import authentication.jsonwebtokens as jsonwebtokens
+import authentication.validation as validation
+from .serializers import DetailsSerializer, ComplaintSerializer
+from . import models
+from . import services
+from . import utils
 
 
 @api_view(["GET"])
@@ -31,7 +31,7 @@ def patients(request, phonenumber=None, active=None):
             return Response({"patient": patient}, status=status.HTTP_200_OK)
 
     # JWT authentication
-    token, error = jsonwebtokens.decode_jwt(
+    token, error = jsonwebtokens.is_authorized(
         request.headers["Authorization"].split(" ")[1], set(["dentist", "admin"])
     )
     if error:
@@ -63,7 +63,7 @@ def details(request):
     """
     if request.method == "POST":
         # Make sure user is admin
-        token, error = jsonwebtokens.decode_jwt(
+        token, error = jsonwebtokens.is_authorized(
             request.headers["Authorization"].split(" ")[1], set(["admin"])
         )
         if error:
@@ -103,7 +103,7 @@ def details(request):
                 serializer.error_messages, status=status.HTTP_400_BAD_REQUEST
             )
 
-        Details.objects.create(
+        models.Details.objects.create(
             id=user_object,
             date_of_birth=serializer.data["date_of_birth"],
             address=serializer.data["address"],
@@ -162,7 +162,7 @@ def complaints(request):
 
     """
     # Make sure user is admin or dentist
-    token, error = jsonwebtokens.decode_jwt(
+    token, error = jsonwebtokens.is_authorized(
         request.headers["Authorization"].split(" ")[1], set(["admin", "dentist"])
     )
     if error:
@@ -173,7 +173,7 @@ def complaints(request):
 
     if request.method == "GET":
         # Fetch active patients
-        all_complaints = Complaint.objects.select_related(
+        all_complaints = models.Complaint.objects.select_related(
             "user", "user__details"
         ).filter(date=datetime.datetime.now().date())
 
@@ -182,7 +182,7 @@ def complaints(request):
             complaints.append(
                 {
                     "name": complaint.user.name,
-                    "age": get_age(complaint.user.details.date_of_birth),
+                    "age": utils.get_age(complaint.user.details.date_of_birth),
                     "phonenumber": complaint.user.phonenumber,
                     "time": complaint.time,
                     "complaint": complaint.complaint,
@@ -222,8 +222,7 @@ def complaints(request):
             )
 
         # Register Complaint
-        # REMEMBER: Time is being saved as GMT(UTC)
-        Complaint.objects.create(
+        models.Complaint.objects.create(
             user=user,
             complaint=serializer.data["chief_complaint"],
         )
@@ -235,3 +234,42 @@ def complaints(request):
         # Also whenever the billing is done (flow ends), update the day in the database for their complaint
 
         return Response({"message": "complaint registered"}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@permission_classes((permissions.AllowAny,))
+def followups(request):
+    """
+    1. GET:
+        a. Fetch all followups for that day (for admin-dentist waiting list)
+        - 200 OK: Everything fine
+        - 401 UNAUTHORIZED: Inappropriate role
+    2. POST:
+        a. Add followup to the database
+
+    """
+    if request.method == "GET":
+        token, error = jsonwebtokens.is_authorized(
+            request.headers.get("Authorization").split(" ")[1],
+            set(["dentist", "admin"]),
+        )
+        if error:
+            return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
+
+        today_date = datetime.datetime.now().date()
+        today_followups = services.fetch_followups_by_date(today_date)
+    return Response({"followups": today_followups}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "POST"])
+@permission_classes((permissions.AllowAny,))
+def patient_history(request):
+    """
+    Get list of all complaints and followups for a particular patient
+    """
+    if request.method == "GET":
+        phonenumber = request.GET.get("phonenumber")
+        name = request.GET.get("name")
+        if phonenumber and name:
+            pass
+    pass

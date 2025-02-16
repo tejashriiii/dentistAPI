@@ -21,7 +21,7 @@ def create_jwt(role, phonenumber, name):
     return encoded
 
 
-def decode_jwt(token, permitted_roles):
+def is_authorized(token, permitted_roles):
     try:
         payload = jwt.decode(
             token,
