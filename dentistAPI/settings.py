@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_celery_beat",
     "rest_framework",
     "authentication",
     "corsheaders",
@@ -165,3 +166,15 @@ CORS_ALLOWED_ORIGINS = [
 
 WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL")
 WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
+
+# Timezone for Celery
+CELERY_TIMEZONE = 'Asia/Kolkata'
+
+# Use JSON for Celery serialization
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+
+# PostgreSQL as the Celery Broker
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers.DatabaseScheduler'

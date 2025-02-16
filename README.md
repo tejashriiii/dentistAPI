@@ -44,6 +44,10 @@ python manage.py makemigrations admin_actions
 python manage.py migrate
 ```
 
+```sh
+python manage.py migrate django_celery_beat
+```
+
 7. Create superuser
 
 ```sh
@@ -62,6 +66,17 @@ a. Go to `http://localhost:8000/admin`
 b. Enter your superuser credentials from step 7
 c. In the `Authentication` app add a doctor and admin
 d. **STRICTLY** Keep password field empty for all the users
+
+9. Run Celery worker
+
+```sh
+celery -A dentistAPI worker --loglevel=info --pool=solo
+```
+
+10. Run Celery beat
+```sh
+celery -A dentistAPI beat --scheduler django_celery_beat.schedulers.DatabaseScheduler --loglevel=info
+```
 
 # dentist-UI
 
