@@ -263,6 +263,55 @@ def followups(request):
 
 @api_view(["GET", "POST"])
 @permission_classes((permissions.AllowAny,))
+def medical_details(request):
+    """
+    Expected JSON:
+    {
+        identity: {
+            name: John Doe,
+            phonenumber: 9654396543,
+        },
+        medical_details: {
+            allergies: [pollen, peanuts],
+            illnesses: [migraine, sinus],
+            smoking: false,
+            drinking: true,
+            tobacco: false,
+        }
+    }
+
+    1. GET:
+        - 200 OK: Everything fine
+    2. POST:
+        - Add medical_details to the database
+
+    """
+    if request.method == "GET":
+        pass
+    if request.method == "POST":
+        token, error = jsonwebtokens.is_authorized(
+            request.headers.get("Authorization").split(" ")[1],
+            set(["dentist"]),
+        )
+        if error:
+            return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
+
+        data, error = services.serialize_medical_details(request.data)
+        if error:
+            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+
+        error = services.add_medical_details(data)
+        if error:
+            return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(
+            {"message": "Medical details have been saved"},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@api_view(["GET", "POST"])
+@permission_classes((permissions.AllowAny,))
 def patient_history(request):
     """
     Get list of all complaints and followups for a particular patient
