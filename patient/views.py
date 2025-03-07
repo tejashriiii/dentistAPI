@@ -32,7 +32,8 @@ def patients(request, phonenumber=None, active=None):
 
     # JWT authentication
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(" ")[1], set(["dentist", "admin"])
+        request.headers["Authorization"].split(
+            " ")[1], set(["dentist", "admin"])
     )
     if error:
         return Response(
@@ -87,7 +88,8 @@ def details(request):
         try:
             user_object = auth.User.objects.create(
                 phonenumber=phonenumber,
-                name=request.data.get("details").get("name"),
+                name=services.capitalize_name(
+                    request.data.get("details").get("name")),
                 role="patient",
                 password="",
             )
@@ -163,7 +165,8 @@ def complaints(request):
     """
     # Make sure user is admin or dentist
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(" ")[1], set(["admin", "dentist"])
+        request.headers["Authorization"].split(
+            " ")[1], set(["admin", "dentist"])
     )
     if error:
         return Response(
@@ -263,31 +266,46 @@ def followups(request):
 
 @api_view(["GET", "POST"])
 @permission_classes((permissions.AllowAny,))
-def medical_details(request):
+def medical_details(request, name=None, phonenumber=None):
     """
-    Expected JSON:
-    {
-        identity: {
-            name: John Doe,
-            phonenumber: 9654396543,
-        },
-        medical_details: {
-            allergies: [pollen, peanuts],
-            illnesses: [migraine, sinus],
-            smoking: false,
-            drinking: true,
-            tobacco: false,
-        }
-    }
 
     1. GET:
         - 200 OK: Everything fine
     2. POST:
         - Add medical_details to the database
+        Expected JSON:
+        {
+            identity: {
+                name: John Doe,
+                phonenumber: 9654396543,
+            },
+            medical_details: {
+                allergies: [pollen, peanuts],
+                illnesses: [migraine, sinus],
+                smoking: false,
+                drinking: true,
+                tobacco: false,
+            }
+        }
 
     """
     if request.method == "GET":
-        pass
+        # DONE: TODO:In backend, Always save names in Capitalized case.
+        # TODO:In frontend, make sure name is sent in lowercase-snake-case.
+        # eg: John Doe -> john_doe
+        data, error = services.serialize_identity(
+            {"name": name, "phonenumber": phonenumber}
+        )
+        if error:
+            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+
+        medical_details, error = services.fetch_medical_details(
+            data["name"], data["phonenumber"]
+        )
+        if error:
+            return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"medical_detials": medical_details}, status=status.HTTP_200_OK)
+
     if request.method == "POST":
         token, error = jsonwebtokens.is_authorized(
             request.headers.get("Authorization").split(" ")[1],
