@@ -270,6 +270,11 @@ def medical_details(request, name=None, phonenumber=None):
     """
 
     1. GET:
+        a. Patient seeing self's medical details (p/medical_details/)
+        b. Doctor fetching a patient's medical details'(p/medical_details/<phone>/<name>)
+        --------HERE NAME IN THE PATH SHOULD BE IN LOWERCASE-SNAKECASE--------
+        eg: John Doe (normal name) -> john_doe(lowercase-snakecase)
+
         - 200 OK: Everything fine
     2. POST:
         - Add medical_details to the database
@@ -290,17 +295,39 @@ def medical_details(request, name=None, phonenumber=None):
 
     """
     if request.method == "GET":
-        # DONE: TODO:In backend, Always save names in Capitalized case.
-        # TODO:In frontend, make sure name is sent in lowercase-snake-case.
-        # eg: John Doe -> john_doe
-        data, error = services.serialize_identity(
-            {"name": name, "phonenumber": phonenumber}
-        )
-        if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+        # Case when doctor is viewing patient's medical_details
+        data = {}  # Empty init for scope adjustment
+        if phonenumber and name:
+            token, error = jsonwebtokens.is_authorized(
+                request.headers.get("Authorization").split(" ")[1],
+                set(["dentist"]),
+            )
+            if error:
+                return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
+
+            name = services.capitalize_name(name, snake_case=True)
+            data, error = services.serialize_identity(
+                {"name": name, "phonenumber": phonenumber}
+            )
+            if error:
+                return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Case when patient is viewing their own medical_details
+        else:
+            # Here we are only interested in getting token, not authorization
+            token, error = jsonwebtokens.is_authorized(
+                request.headers.get("Authorization").split(" ")[1],
+            )
+            data, error = services.serialize_identity(
+                {"name": token.get("name"),
+                 "phonenumber": token.get("phonenumber")}
+            )
+            if error:
+                return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
 
         medical_details, error = services.fetch_medical_details(
-            data["name"], data["phonenumber"]
+            data["name"],
+            data["phonenumber"],
         )
         if error:
             return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)

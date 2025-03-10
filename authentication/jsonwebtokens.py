@@ -21,7 +21,7 @@ def create_jwt(role, phonenumber, name):
     return encoded
 
 
-def is_authorized(token, permitted_roles):
+def is_authorized(token, permitted_roles=None):
     try:
         payload = jwt.decode(
             token,
@@ -35,7 +35,8 @@ def is_authorized(token, permitted_roles):
         return None, "JWT is missing required claims"
     except jwt.DecodeError:
         return None, "Invalid JWT"
-    if payload.get("role") not in permitted_roles:
-        return None, "You are unauthorized"
+    if permitted_roles:
+        if payload.get("role") not in permitted_roles:
+            return None, "You are unauthorized"
 
     return payload, None

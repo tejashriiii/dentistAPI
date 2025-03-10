@@ -114,13 +114,11 @@ def add_medical_details(data):
     return None
 
 
-def fetch_medical_details(name, phonenumber):
+def fetch_medical_details(capitalized_name, phonenumber):
     """
-    1. Convert to capitalcase from snakecase
-    2. Fetch the medical details of patient
+    Fetch the medical details of patient
     - illnesses, allergies, smoking, drinking, tobacco
     """
-    capitalized_name = capitalize_name(name, snake_case=True)
     error, user_details = fetch_details_object(capitalized_name, phonenumber)
     if error:
         return None, error
