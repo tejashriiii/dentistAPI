@@ -135,18 +135,26 @@ def login(request):
             )
 
         # Case 3
-        try:
-            stored_user: str = models.User.objects.get(
-                phonenumber=serializer.data["phonenumber"], name=serializer.data["name"]
-            )
-
-        except models.User.DoesNotExist:
+        probe_users = models.User.objects.filter(
+            phonenumber=serializer.data["phonenumber"]
+        )
+        if not probe_users:
             return Response(
                 {"error": "Phonenumber isn't registered by admin"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
         # Case 4
+        try:
+            stored_user = models.User.objects.get(
+                phonenumber=serializer.data["phonenumber"],
+                name=serializer.data["name"],
+            )
+        except models.User.DoesNotExist:
+            return Response(
+                {"error": "Phonenumber not registered with this name. Register again."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         if stored_user.password == "":
             return Response(
                 {"error": "You haven't set up your password. Signup first!"},
