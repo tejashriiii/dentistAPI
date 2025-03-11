@@ -27,15 +27,18 @@ python manage.py makemigrations
 ```
 
 ```sh
-python manage.py makemigrations user
-```
-
-```sh
 python manage.py makemigrations authentication
 ```
 
 ```sh
-python manage.py makemigrations admin_actions
+python manage.py makemigrations messaging
+```
+
+```sh
+python manage.py makemigrations doctor
+```
+```sh
+python manage.py makemigrations patient
 ```
 
 6. Migrate
@@ -62,18 +65,24 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-a. Go to `http://localhost:8000/admin`
-b. Enter your superuser credentials from step 7
-c. In the `Authentication` app add a doctor and admin
-d. **STRICTLY** Keep password field empty for all the users
+-  Go to `http://localhost:8000/admin`
+-  Enter your superuser credentials from step 7
+-  In the `Authentication` app add a doctor and admin
+-  **STRICTLY** Keep password field empty for all the users
 
-9. Run Celery worker
+9. Populate tables
+```sh
+python manage.py populate_treatments
+```
+
+## For testing whatsapp functionality (OPTIONAL for keeping development server online)
+1. Run Celery worker
 
 ```sh
 celery -A dentistAPI worker --loglevel=info --pool=solo
 ```
 
-10. Run Celery beat
+2. Run Celery beat
 ```sh
 celery -A dentistAPI beat --scheduler django_celery_beat.schedulers.DatabaseScheduler --loglevel=info
 ```
