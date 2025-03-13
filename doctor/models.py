@@ -10,7 +10,7 @@ class Treatment(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    name = models.TextField()
+    name = models.TextField(unique=True)
     price = models.IntegerField()
 
     class Meta:
@@ -25,7 +25,7 @@ class Prescription(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    name = models.TextField()
+    name = models.TextField(unique=True)
     type = models.TextField()
 
     class Meta:
