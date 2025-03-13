@@ -58,3 +58,57 @@ def treatments(request, treatment_id=None):
 
         # create record
         treatment_serializer.save()
+
+
+@api_view(["GET", "POST", "DELETE"])
+@permission_classes((permissions.AllowAny,))
+def prescriptions(request, prescription_id=None):
+    """
+    1. GET: Fetch all treatments
+    2. POST: Add new treatment
+    {
+    "name": "RCT"
+    "type": "injection",
+    }
+    3. DELETE: Remove treatment
+    """
+    # JWT authentication
+    token, error = jsonwebtokens.is_authorized(
+        request.headers["Authorization"].split(" ")[1], set(["dentist"])
+    )
+    if error:
+        return Response(
+            {"error": error},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    if request.method == "GET":
+        prescriptions = services.fetch_structured_prescriptions()
+        return Response({"prescriptions": prescriptions})
+
+    if request.method == "DELETE":
+        if prescription_id:
+            name, error = services.delete_prescription_by_id(prescription_id)
+            if error:
+                return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"success": f"{name} deleted"}, status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {"error": "Prescription could not be deleted"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+    if request.method == "POST":
+        # serialize data
+        prescription_serializer = serializers.PrescriptionSerializer(data=request.data)
+        if not prescription_serializer.is_valid():
+            return Response(
+                {"error": "Duplicate Prescription, it already exists"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # create record
+        prescription_serializer.save()
+        return Response(
+            {"success": f"{prescription_serializer.data["name"]} created!"},
+            status=status.HTTP_200_OK,
+        )
