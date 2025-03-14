@@ -49,3 +49,17 @@ class PhoneNameSerializer(serializers.Serializer):
 
     phonenumber = serializers.IntegerField()
     name = serializers.CharField()
+
+
+class FollowupSerializer(serializers.ModelSerializer):
+    """
+    title:<String> The name of followup that patient sees
+    description:<String> What the dentist ended up doing in this sitting (private)
+    date: <Date> When followup is scheduled
+    time: <Time> When followup is scheduled
+    completed: <Bool> Whether sitting has been completed or not
+    """
+
+    class Meta:
+        model = models.FollowUp
+        exclude = ["id", "complaint"]

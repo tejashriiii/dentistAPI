@@ -8,6 +8,7 @@ from authentication import models as auth
 import authentication.jsonwebtokens as jsonwebtokens
 import authentication.validation as validation
 from .serializers import DetailsSerializer, ComplaintSerializer
+from . import serializers
 from . import models
 from . import services
 from . import utils
@@ -32,8 +33,7 @@ def patients(request, phonenumber=None, active=None):
 
     # JWT authentication
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(
-            " ")[1], set(["dentist", "admin"])
+        request.headers["Authorization"].split(" ")[1], set(["dentist", "admin"])
     )
     if error:
         return Response(
@@ -88,8 +88,7 @@ def details(request):
         try:
             user_object = auth.User.objects.create(
                 phonenumber=phonenumber,
-                name=services.capitalize_name(
-                    request.data.get("details").get("name")),
+                name=services.capitalize_name(request.data.get("details").get("name")),
                 role="patient",
                 password="",
             )
@@ -165,8 +164,7 @@ def complaints(request):
     """
     # Make sure user is admin or dentist
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(
-            " ")[1], set(["admin", "dentist"])
+        request.headers["Authorization"].split(" ")[1], set(["admin", "dentist"])
     )
     if error:
         return Response(
@@ -239,7 +237,7 @@ def complaints(request):
         return Response({"message": "complaint registered"}, status=status.HTTP_200_OK)
 
 
-@api_view(["GET"])
+@api_view(["GET", "POST"])
 @permission_classes((permissions.AllowAny,))
 def followups(request):
     """
@@ -249,6 +247,17 @@ def followups(request):
         - 401 UNAUTHORIZED: Inappropriate role
     2. POST:
         a. Add followup to the database
+    Expected JSON: {
+        complaint_id: <valid UUID from database>,
+        followup: {
+            title: "meeting 2",
+            description: "" (empty, info about what will happen in followup, filled after followup complete),
+            date: "2025-12-05",
+            time: "13:30:00",
+            completed: False,
+            number: 1
+        }
+    }
 
     """
     if request.method == "GET":
@@ -261,7 +270,38 @@ def followups(request):
 
         today_date = datetime.datetime.now().date()
         today_followups = services.fetch_followups_by_date(today_date)
-    return Response({"followups": today_followups}, status=status.HTTP_200_OK)
+        return Response({"followups": today_followups}, status=status.HTTP_200_OK)
+
+    elif request.method == "POST":
+        token, error = jsonwebtokens.is_authorized(
+            request.headers.get("Authorization").split(" ")[1],
+            set(["dentist"]),
+        )
+        if error:
+            return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
+        followup_serializer = serializers.FollowupSerializer(
+            data=request.data["followup"]
+        )
+        if not followup_serializer.is_valid():
+            return Response(
+                {"error": "Invaild fields, check all the fields properly"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        error = services.create_followup(
+            request.data["complaint_id"], followup_serializer.data
+        )
+        if error:
+            return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(
+            {"success": "Followup has been created"}, status=status.HTTP_200_OK
+        )
+        """
+        error = services.create_followup(followup_serializer.data)
+        return Response(
+            {"success": "Followup has been created"}, status=status.HTTP_200_OK
+        )
+        """
 
 
 @api_view(["GET", "POST"])
@@ -319,8 +359,7 @@ def medical_details(request, name=None, phonenumber=None):
                 request.headers.get("Authorization").split(" ")[1],
             )
             data, error = services.serialize_identity(
-                {"name": token.get("name"),
-                 "phonenumber": token.get("phonenumber")}
+                {"name": token.get("name"), "phonenumber": token.get("phonenumber")}
             )
             if error:
                 return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)

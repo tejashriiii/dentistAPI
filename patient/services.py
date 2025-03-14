@@ -1,18 +1,18 @@
 import datetime
+import uuid
 from . import models
 from . import serializers
 from . import utils
 from authentication.models import User
+from django.db import IntegrityError
 
 
 def capitalize_name(name, snake_case=False):
     separated_name = []
     if snake_case:
-        separated_name = list(
-            map(lambda x: x.capitalize() + " ", name.split("_")))
+        separated_name = list(map(lambda x: x.capitalize() + " ", name.split("_")))
     else:
-        separated_name = list(
-            map(lambda x: x.capitalize() + " ", name.split()))
+        separated_name = list(map(lambda x: x.capitalize() + " ", name.split()))
     capitalized_name = ""
     for name in separated_name:
         capitalized_name += name
@@ -40,6 +40,44 @@ def fetch_followups_by_date(date: datetime.datetime.date):
     if not formatted_followups:
         return ["No followups today"]
     return formatted_followups
+
+
+def is_valid_uuid(uuid_string):
+    try:
+        uuid.UUID(uuid_string, version=4)
+    except ValueError:
+        return False
+    return True
+
+
+def create_followup(complaint_id, followup_data):
+    """
+    - Checks if complaint_id is valid or not then creates a followup with
+    serialized data
+    - Errors Handled:
+        1. Invalid UUID for complaint_id
+        2. Non-existent complaint_id
+        3. Duplicate constraint (complaint, number)
+    """
+    if not is_valid_uuid(complaint_id):
+        return "Invalid followup, chief complaint is not registered"
+
+    try:
+        complaint_data = models.Complaint.objects.get(id=complaint_id)
+    except models.Complaint.DoesNotExist:
+        return "Invalid followup, chief complaint is not registered"
+    try:
+        models.FollowUp.objects.create(
+            complaint=complaint_data,
+            title=followup_data["title"],
+            description=followup_data["description"],
+            date=followup_data["date"],
+            time=followup_data["time"],
+            number=followup_data["number"],
+        )
+    except IntegrityError:
+        return "Duplicate followup, it already exists"
+    return None
 
 
 def serialize_identity(medical_data):

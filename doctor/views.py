@@ -98,7 +98,6 @@ def prescriptions(request, prescription_id=None):
                 status=status.HTTP_404_NOT_FOUND,
             )
     if request.method == "POST":
-        # serialize data
         prescription_serializer = serializers.PrescriptionSerializer(data=request.data)
         if not prescription_serializer.is_valid():
             return Response(
@@ -106,7 +105,6 @@ def prescriptions(request, prescription_id=None):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # create record
         prescription_serializer.save()
         return Response(
             {"success": f"{prescription_serializer.data["name"]} created!"},

@@ -64,7 +64,7 @@ class Complaint(models.Model):
 class Diagnosis(models.Model):
     """
     id: <UUID> (Primary key)
-    complaint: <UUID> (Foreign Key for User)
+    complaint: <Complaint> (Foreign Key for User)
     tooth_number:<Int> when complaint was registered
     diagnosis: <String> Description of diagnosis
     """
@@ -82,12 +82,13 @@ class Diagnosis(models.Model):
 class FollowUp(models.Model):
     """
     id: <UUID> (Primary key)
-    complaint: <UUID> (Foreign Key for Complaint)
+    complaint: <Complaint> (Foreign Key for Complaint)
     title:<String> The name of followup that patient sees
     description:<String> What the dentist ended up doing in this sitting (private)
     date: <Date> When followup is scheduled
     time: <Time> When followup is scheduled
     completed: <Bool> Whether sitting has been completed or not
+    number: <Int> Followup no. since complaint
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
@@ -96,7 +97,13 @@ class FollowUp(models.Model):
     time = models.TimeField(null=True, blank=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    completed = models.BooleanField()
+    completed = models.BooleanField(default=False)
+    number = models.IntegerField()
 
     class Meta:
         db_table = "followups"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["complaint", "number"], name="unique_complaint+number"
+            )
+        ]
