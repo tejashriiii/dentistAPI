@@ -6,6 +6,7 @@ from rest_framework import status
 from . import models
 from . import validation
 from . import jsonwebtokens
+from patient import services
 import bcrypt
 import os
 
@@ -61,7 +62,8 @@ def signup(request):
         # Case 3
         try:
             user_object = models.User.objects.get(
-                phonenumber=serializer.data["phonenumber"], name=serializer.data["name"]
+                phonenumber=serializer.data["phonenumber"],
+                name=services.capitalize_name(serializer.data["name"]),
             )
         except models.User.DoesNotExist:
             return Response(
@@ -148,7 +150,7 @@ def login(request):
         try:
             stored_user = models.User.objects.get(
                 phonenumber=serializer.data["phonenumber"],
-                name=serializer.data["name"],
+                name=services.capitalize_name(serializer.data["name"]),
             )
         except models.User.DoesNotExist:
             return Response(
@@ -173,7 +175,7 @@ def login(request):
         jwt = jsonwebtokens.create_jwt(
             role=stored_user.role,
             phonenumber=serializer.data["phonenumber"],
-            name=serializer.data["name"],
+            name=services.capitalize_name(serializer.data["name"]),
         )
 
         return Response({"token": jwt}, status=status.HTTP_201_CREATED)

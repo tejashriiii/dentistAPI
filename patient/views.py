@@ -33,7 +33,8 @@ def patients(request, phonenumber=None, active=None):
 
     # JWT authentication
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(" ")[1], set(["dentist", "admin"])
+        request.headers["Authorization"].split(
+            " ")[1], set(["dentist", "admin"])
     )
     if error:
         return Response(
@@ -88,7 +89,8 @@ def details(request):
         try:
             user_object = auth.User.objects.create(
                 phonenumber=phonenumber,
-                name=services.capitalize_name(request.data.get("details").get("name")),
+                name=services.capitalize_name(
+                    request.data.get("details").get("name")),
                 role="patient",
                 password="",
             )
@@ -164,7 +166,8 @@ def complaints(request):
     """
     # Make sure user is admin or dentist
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(" ")[1], set(["admin", "dentist"])
+        request.headers["Authorization"].split(
+            " ")[1], set(["admin", "dentist"])
     )
     if error:
         return Response(
@@ -214,7 +217,8 @@ def complaints(request):
         # Fetch user_id
         try:
             user = auth.User.objects.get(
-                phonenumber=phonenumber, name=serializer.data["name"]
+                phonenumber=phonenumber,
+                name=services.capitalize_name(serializer.data["name"]),
             )
         except auth.User.DoesNotExist:
             return Response(
@@ -359,7 +363,8 @@ def medical_details(request, name=None, phonenumber=None):
                 request.headers.get("Authorization").split(" ")[1],
             )
             data, error = services.serialize_identity(
-                {"name": token.get("name"), "phonenumber": token.get("phonenumber")}
+                {"name": token.get("name"),
+                 "phonenumber": token.get("phonenumber")}
             )
             if error:
                 return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
