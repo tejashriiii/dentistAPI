@@ -68,3 +68,30 @@ def update_prescription(prescription_id, prescription_data):
             status.HTTP_409_CONFLICT,
         )
     return None, None
+
+
+def update_treatment(treatment_id, treatment_data):
+    """
+    Update the name, type of treatment
+    1. treatment_id not valid uuid
+    2. treatment_id does not exist
+    3. duplicate name given
+    4. successful update
+    """
+    if not patient_services.is_valid_uuid(treatment_id):
+        return "Invalid treatment, it does not exist", status.HTTP_404_NOT_FOUND
+
+    try:
+        treatment_to_update = models.Treatment.objects.get(id=treatment_id)
+    except models.Treatment.DoesNotExist:
+        return "Invalid treatment, it does not exist", status.HTTP_404_NOT_FOUND
+    treatment_to_update.price = treatment_data["price"]
+    treatment_to_update.name = treatment_data["name"]
+    try:
+        treatment_to_update.save()
+    except IntegrityError:
+        return (
+            "Duplicate entry, treatment with this name exists",
+            status.HTTP_409_CONFLICT,
+        )
+    return None, None

@@ -10,17 +10,27 @@ from . import services
 # Create your views here.
 
 
-@api_view(["GET", "POST", "DELETE"])
+@api_view(["GET", "POST", "DELETE", "PUT"])
 @permission_classes((permissions.AllowAny,))
 def treatments(request, treatment_id=None):
     """
     1. GET: Fetch all treatments
     2. POST: Add new treatment
+    Expected JSON:
     {
-    "name": "RCT"
-    "price": 1000,
+        "name": "RCT"
+        "price": 1000,
     }
     3. DELETE: Remove treatment
+    2. PUT: Update treatment
+    Expected JSON:
+    {
+        "id": "21ed0219-6358-4555-9efe-b996d2e94508",
+        "treatment": {
+            "name": "Temporary Filling",
+            "price": 2000
+        }
+    }
     """
     # JWT authentication
     token, error = jsonwebtokens.is_authorized(
@@ -59,6 +69,26 @@ def treatments(request, treatment_id=None):
 
         # create record
         treatment_serializer.save()
+
+    elif request.method == "PUT":
+        treatment_serializer = serializers.TreatmentUpdateSerializer(
+            data=request.data["treatment"]
+        )
+        if not treatment_serializer.is_valid():
+            return Response(
+                {"error": "Invalid field, check all fields properly"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        error, error_status = services.update_treatment(
+            request.data["id"], treatment_serializer.data
+        )
+        if error:
+            return Response({"error": error}, status=error_status)
+        return Response(
+            {"success": f"{treatment_serializer.data["name"]} updated!"},
+            status=status.HTTP_200_OK,
+        )
 
 
 @api_view(["GET", "POST", "DELETE", "PUT"])
