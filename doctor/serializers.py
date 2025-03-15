@@ -22,3 +22,18 @@ class PrescriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Prescription
         exclude = ["id"]
+
+
+class PrescriptionUpdateSerializer(serializers.Serializer):
+    """
+    Had to create separate serializer because
+    - "name" had unique constraint violations that needed
+      to be loosened up in this case
+    - handling the unique constraint during updation instead
+      of validation
+    name: <String>
+    type: <String>
+    """
+
+    name = serializers.CharField()
+    type = serializers.CharField()

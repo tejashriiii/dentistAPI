@@ -49,7 +49,8 @@ def treatments(request, treatment_id=None):
             )
     if request.method == "POST":
         # serialize data
-        treatment_serializer = serializers.TreatmentSerializer(data=request.data)
+        treatment_serializer = serializers.TreatmentSerializer(
+            data=request.data)
         if not treatment_serializer.is_valid():
             return Response(
                 {"error": "Duplicate Treatment, it already exists"},
@@ -60,17 +61,26 @@ def treatments(request, treatment_id=None):
         treatment_serializer.save()
 
 
-@api_view(["GET", "POST", "DELETE"])
+@api_view(["GET", "POST", "DELETE", "PUT"])
 @permission_classes((permissions.AllowAny,))
 def prescriptions(request, prescription_id=None):
     """
-    1. GET: Fetch all treatments
-    2. POST: Add new treatment
+    1. GET: Fetch all prescriptions
+    2. POST: Add new prescriptions
+    Expected JSON:
     {
-    "name": "RCT"
-    "type": "injection",
+        "name": "Voveron"
+        "type": "Medication",
     }
     3. DELETE: Remove treatment
+    4. PUT: Update treatment
+    {
+        "id": <UUID>,
+        "prescription": {
+            "name": "Voveron 300"
+            "type": "Injection"
+        }
+    }
     """
     # JWT authentication
     token, error = jsonwebtokens.is_authorized(
@@ -97,8 +107,9 @@ def prescriptions(request, prescription_id=None):
                 {"error": "Prescription could not be deleted"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-    if request.method == "POST":
-        prescription_serializer = serializers.PrescriptionSerializer(data=request.data)
+    elif request.method == "POST":
+        prescription_serializer = serializers.PrescriptionSerializer(
+            data=request.data)
         if not prescription_serializer.is_valid():
             return Response(
                 {"error": "Duplicate Prescription, it already exists"},
@@ -108,5 +119,25 @@ def prescriptions(request, prescription_id=None):
         prescription_serializer.save()
         return Response(
             {"success": f"{prescription_serializer.data["name"]} created!"},
+            status=status.HTTP_200_OK,
+        )
+    elif request.method == "PUT":
+        prescription_serializer = serializers.PrescriptionUpdateSerializer(
+            data=request.data["prescription"]
+        )
+        if not prescription_serializer.is_valid():
+            return Response(
+                {"error": "Invalid field, check all fields properly"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # fetch the old prescription
+        error, error_status = services.update_prescription(
+            request.data["id"], prescription_serializer.data
+        )
+        if error:
+            return Response({"error": error}, status=error_status)
+        return Response(
+            {"success": f"{prescription_serializer.data["name"]} updated!"},
             status=status.HTTP_200_OK,
         )
