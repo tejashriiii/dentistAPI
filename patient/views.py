@@ -241,7 +241,7 @@ def complaints(request):
         return Response({"message": "complaint registered"}, status=status.HTTP_200_OK)
 
 
-@api_view(["GET", "POST"])
+@api_view(["GET", "POST", "PUT"])
 @permission_classes((permissions.AllowAny,))
 def followups(request):
     """
@@ -254,15 +254,24 @@ def followups(request):
     Expected JSON: {
         complaint_id: <valid UUID from database>,
         followup: {
-            title: "meeting 2",
-            description: "" (empty, info about what will happen in followup, filled after followup complete),
-            date: "2025-12-05",
-            time: "13:30:00",
-            completed: False,
-            number: 1
+            "title": "meeting 2",
+            "description": "" (empty, info about what will happen in followup, filled after followup complete),
+            "date": "2025-12-05",
+            "time": "13:30:00",
+            "completed": False,
+            "number": 1
         }
     }
-
+    3. PUT:
+    - After followup, when doctor updates the description i.else:
+    they type out what they did during the followup
+    - Update time incase, it doesn't match
+    - Expected JSON : {
+        "id": "55adcbae-df2b-4fee-87b6-d16bf170b04f",
+        "description": "performed RCT, fixed tooth 23, 12"
+        "time": "14:30:00" (even if not changed, ask frontend to send)
+        "date": "2025-12-13" (even if not changed, ask frontend to send)
+    }
     """
     if request.method == "GET":
         token, error = jsonwebtokens.is_authorized(
@@ -276,13 +285,15 @@ def followups(request):
         today_followups = services.fetch_followups_by_date(today_date)
         return Response({"followups": today_followups}, status=status.HTTP_200_OK)
 
+    # FOR POST AND PUT you need to be dentist
+    token, error = jsonwebtokens.is_authorized(
+        request.headers.get("Authorization").split(" ")[1],
+        set(["dentist"]),
+    )
+    if error:
+        return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
+
     elif request.method == "POST":
-        token, error = jsonwebtokens.is_authorized(
-            request.headers.get("Authorization").split(" ")[1],
-            set(["dentist"]),
-        )
-        if error:
-            return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
         followup_serializer = serializers.FollowupSerializer(
             data=request.data["followup"]
         )
@@ -300,12 +311,22 @@ def followups(request):
         return Response(
             {"success": "Followup has been created"}, status=status.HTTP_200_OK
         )
-        """
-        error = services.create_followup(followup_serializer.data)
-        return Response(
-            {"success": "Followup has been created"}, status=status.HTTP_200_OK
+    elif request.method == "PUT":
+        followup_update_serializer = serializers.FollowupUpdateSerializer(
+            data=request.data
         )
-        """
+        if not followup_update_serializer.is_valid():
+            return Response(
+                {"error": "Invaild fields, check all the fields properly"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        error = services.update_followup(followup_update_serializer.data)
+        if error:
+            return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(
+            {"success": "Followup has been updated"}, status=status.HTTP_200_OK
+        )
 
 
 @api_view(["GET", "POST"])

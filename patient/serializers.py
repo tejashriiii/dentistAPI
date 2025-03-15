@@ -12,7 +12,8 @@ class DetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Details
-        exclude = ["id", "allergies", "illnesses", "tobacco", "smoking", "drinking"]
+        exclude = ["id", "allergies", "illnesses",
+                   "tobacco", "smoking", "drinking"]
 
 
 class MedicalDetailsSerializer(serializers.Serializer):
@@ -24,8 +25,10 @@ class MedicalDetailsSerializer(serializers.Serializer):
     drinking: <Bool>
     """
 
-    allergies = serializers.ListField(child=serializers.CharField(), default=[])
-    illnesses = serializers.ListField(child=serializers.CharField(), default=[])
+    allergies = serializers.ListField(
+        child=serializers.CharField(), default=[])
+    illnesses = serializers.ListField(
+        child=serializers.CharField(), default=[])
     smoking = serializers.BooleanField(default=False)
     tobacco = serializers.BooleanField(default=False)
     drinking = serializers.BooleanField(default=False)
@@ -63,3 +66,19 @@ class FollowupSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.FollowUp
         exclude = ["id", "complaint"]
+
+
+class FollowupUpdateSerializer(serializers.Serializer):
+    """
+    id: <UUID>
+    description:<String> What the dentist ended up doing in this sitting (private)
+    date: <Date> When followup is scheduled
+    time: <Time> When followup is scheduled
+    completed: <Bool> Whether sitting has been completed or not
+    """
+
+    id = serializers.UUIDField()
+    description = serializers.CharField()
+    time = serializers.TimeField()
+    date = serializers.DateField()
+    completed = serializers.BooleanField()

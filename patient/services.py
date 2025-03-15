@@ -10,9 +10,11 @@ from django.db import IntegrityError
 def capitalize_name(name, snake_case=False):
     separated_name = []
     if snake_case:
-        separated_name = list(map(lambda x: x.capitalize() + " ", name.split("_")))
+        separated_name = list(
+            map(lambda x: x.capitalize() + " ", name.split("_")))
     else:
-        separated_name = list(map(lambda x: x.capitalize() + " ", name.split()))
+        separated_name = list(
+            map(lambda x: x.capitalize() + " ", name.split()))
     capitalized_name = ""
     for name in separated_name:
         capitalized_name += name
@@ -77,6 +79,25 @@ def create_followup(complaint_id, followup_data):
         )
     except IntegrityError:
         return "Duplicate followup, it already exists"
+    return None
+
+
+def update_followup(followup_data):
+    """
+    After the followup is done, the doctor updates fields like
+    description, completed, date, time
+    """
+    try:
+        followup_to_update = models.FollowUp.objects.get(
+            id=followup_data["id"])
+    except models.FollowUp.DoesNotExist:
+        "Invalid followup, it does not exist"
+
+    followup_to_update.description = followup_data["description"]
+    followup_to_update.date = followup_data["date"]
+    followup_to_update.time = followup_data["time"]
+    followup_to_update.completed = followup_data["completed"]
+    followup_to_update.save()
     return None
 
 
