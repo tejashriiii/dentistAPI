@@ -10,11 +10,9 @@ from django.db import IntegrityError
 def capitalize_name(name, snake_case=False):
     separated_name = []
     if snake_case:
-        separated_name = list(
-            map(lambda x: x.capitalize() + " ", name.split("_")))
+        separated_name = list(map(lambda x: x.capitalize() + " ", name.split("_")))
     else:
-        separated_name = list(
-            map(lambda x: x.capitalize() + " ", name.split()))
+        separated_name = list(map(lambda x: x.capitalize() + " ", name.split()))
     capitalized_name = ""
     for name in separated_name:
         capitalized_name += name
@@ -42,6 +40,22 @@ def fetch_followups_by_date(date: datetime.datetime.date):
     if not formatted_followups:
         return ["No followups today"]
     return formatted_followups
+
+
+def fetch_followups_by_complaint(complaint_id):
+    """
+    Fetch all the past followups for a particular complaint
+    """
+    # filter method fails gracefully so now DoesNotExist is raised
+    # i.e why "if" instead of "try-except"
+    past_followups = (
+        models.FollowUp.objects.select_related("complaint")
+        .filter(complaint__id=complaint_id)
+        .values()
+    )
+    if not len(past_followups):
+        return None, "No followups present this complaint"
+    return past_followups, None
 
 
 def is_valid_uuid(uuid_string):
@@ -88,8 +102,7 @@ def update_followup(followup_data):
     description, completed, date, time
     """
     try:
-        followup_to_update = models.FollowUp.objects.get(
-            id=followup_data["id"])
+        followup_to_update = models.FollowUp.objects.get(id=followup_data["id"])
     except models.FollowUp.DoesNotExist:
         "Invalid followup, it does not exist"
 

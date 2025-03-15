@@ -33,8 +33,7 @@ def patients(request, phonenumber=None, active=None):
 
     # JWT authentication
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(
-            " ")[1], set(["dentist", "admin"])
+        request.headers["Authorization"].split(" ")[1], set(["dentist", "admin"])
     )
     if error:
         return Response(
@@ -89,8 +88,7 @@ def details(request):
         try:
             user_object = auth.User.objects.create(
                 phonenumber=phonenumber,
-                name=services.capitalize_name(
-                    request.data.get("details").get("name")),
+                name=services.capitalize_name(request.data.get("details").get("name")),
                 role="patient",
                 password="",
             )
@@ -166,8 +164,7 @@ def complaints(request):
     """
     # Make sure user is admin or dentist
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(
-            " ")[1], set(["admin", "dentist"])
+        request.headers["Authorization"].split(" ")[1], set(["admin", "dentist"])
     )
     if error:
         return Response(
@@ -243,7 +240,7 @@ def complaints(request):
 
 @api_view(["GET", "POST", "PUT"])
 @permission_classes((permissions.AllowAny,))
-def followups(request):
+def followups(request, complaint_id=None):
     """
     1. GET:
         a. Fetch all followups for that day (for admin-dentist waiting list)
@@ -281,6 +278,22 @@ def followups(request):
         if error:
             return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
 
+        # fetching followups for patient's complaint
+        if complaint_id:
+            # the url already verifies that UUID is valid so no checking needed
+            # fetch all followups for that complaint_id
+            past_followups, error = services.fetch_followups_by_complaint(complaint_id)
+            if error:
+                return Response(
+                    {"error": error},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            return Response(
+                {"followups": past_followups},
+                status=status.HTTP_200_OK,
+            )
+
+        # fetching followups for dashboard
         today_date = datetime.datetime.now().date()
         today_followups = services.fetch_followups_by_date(today_date)
         return Response({"followups": today_followups}, status=status.HTTP_200_OK)
@@ -384,8 +397,7 @@ def medical_details(request, name=None, phonenumber=None):
                 request.headers.get("Authorization").split(" ")[1],
             )
             data, error = services.serialize_identity(
-                {"name": token.get("name"),
-                 "phonenumber": token.get("phonenumber")}
+                {"name": token.get("name"), "phonenumber": token.get("phonenumber")}
             )
             if error:
                 return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
