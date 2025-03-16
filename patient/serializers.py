@@ -12,7 +12,8 @@ class DetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Details
-        exclude = ["id", "allergies", "illnesses", "tobacco", "smoking", "drinking"]
+        exclude = ["id", "allergies", "illnesses",
+                   "tobacco", "smoking", "drinking"]
 
 
 class MedicalDetailsSerializer(serializers.Serializer):
@@ -24,8 +25,10 @@ class MedicalDetailsSerializer(serializers.Serializer):
     drinking: <Bool>
     """
 
-    allergies = serializers.ListField(child=serializers.CharField(), default=[])
-    illnesses = serializers.ListField(child=serializers.CharField(), default=[])
+    allergies = serializers.ListField(
+        child=serializers.CharField(), default=[])
+    illnesses = serializers.ListField(
+        child=serializers.CharField(), default=[])
     smoking = serializers.BooleanField(default=False)
     tobacco = serializers.BooleanField(default=False)
     drinking = serializers.BooleanField(default=False)
@@ -101,3 +104,15 @@ class FollowupUpdateSerializer(serializers.Serializer):
     time = serializers.TimeField()
     date = serializers.DateField()
     completed = serializers.BooleanField()
+
+
+class BillSerializer(serializers.Serializer):
+    """
+    complaint: <UUID> along with which bill is associated
+    full_bill: <Integer> Total amount (without discount)
+    discount: <Integer> Amount of discount given by the dentist
+    """
+
+    complaint = serializers.UUIDField()
+    full_bill = serializers.IntegerField()
+    discount = serializers.IntegerField()

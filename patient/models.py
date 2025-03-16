@@ -113,3 +113,20 @@ class FollowUp(models.Model):
                 fields=["complaint", "number"], name="unique_complaint+number"
             )
         ]
+
+
+class Bill(models.Model):
+    """
+    id: <UUID>
+    complaint: <Complaint> along with which bill is associated
+    full_bill: <Integer> Total amount (without discount)
+    discount: <Integer> Amount of discount given by the dentist
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    complaint = models.OneToOneField(Complaint, on_delete=models.CASCADE)
+    full_bill = models.IntegerField()
+    discount = models.IntegerField()
+
+    class Meta:
+        db_table = "bills"

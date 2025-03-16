@@ -5,15 +5,18 @@ from . import serializers
 from . import utils
 from authentication.models import User
 from django.db import IntegrityError
+from django.forms.models import model_to_dict
 from rest_framework import status
 
 
 def capitalize_name(name, snake_case=False):
     separated_name = []
     if snake_case:
-        separated_name = list(map(lambda x: x.capitalize() + " ", name.split("_")))
+        separated_name = list(
+            map(lambda x: x.capitalize() + " ", name.split("_")))
     else:
-        separated_name = list(map(lambda x: x.capitalize() + " ", name.split()))
+        separated_name = list(
+            map(lambda x: x.capitalize() + " ", name.split()))
     capitalized_name = ""
     for name in separated_name:
         capitalized_name += name
@@ -131,14 +134,16 @@ def create_diagnosis(diagnosis_data):
     3. Success
     """
     try:
-        complaint = models.Complaint.objects.get(id=diagnosis_data["complaint"])
+        complaint = models.Complaint.objects.get(
+            id=diagnosis_data["complaint"])
     except models.Complaint.DoesNotExist:
         return (
             f"For {diagnosis_data["tooth_number"]} Invalid chief-complaint",
             status.HTTP_404_NOT_FOUND,
         )
     try:
-        treatment = models.Treatment.objects.get(id=diagnosis_data["treatment"])
+        treatment = models.Treatment.objects.get(
+            id=diagnosis_data["treatment"])
     except models.Treatment.DoesNotExist:
         return (
             f"For {diagnosis_data["tooth_number"]} Invalid chief-complaint",
@@ -271,7 +276,8 @@ def update_followup(followup_data):
     description, completed, date, time
     """
     try:
-        followup_to_update = models.FollowUp.objects.get(id=followup_data["id"])
+        followup_to_update = models.FollowUp.objects.get(
+            id=followup_data["id"])
     except models.FollowUp.DoesNotExist:
         "Invalid followup, it does not exist"
 
@@ -281,3 +287,42 @@ def update_followup(followup_data):
     followup_to_update.completed = followup_data["completed"]
     followup_to_update.save()
     return None
+
+
+def create_bill(bill_data):
+    """
+    Creating bill for the very first time
+    1. Checks if complaint exists
+    2. Checks one-to-one relation with complaint
+    2. Success
+    """
+    try:
+        complaint = models.Complaint.objects.get(id=bill_data["complaint"])
+    except models.Complaint.DoesNotExist:
+        return "Can't create bill, invalid complaint", status.HTTP_404_NOT_FOUND
+    try:
+        bill = models.Bill.objects.create(
+            complaint=complaint,
+            full_bill=bill_data["full_bill"],
+            discount=bill_data["discount"],
+        )
+        bill.save()
+    except IntegrityError:
+        return "Bill already exists for this complaint", status.HTTP_409_CONFLICT
+    return None, None
+
+
+def fetch_bill(complaint_id):
+    """
+    Fetch the bill given the complaint id
+    1. Check if bill exists for complaint
+    2. Success
+    """
+    try:
+        bill = models.Bill.objects.select_related("complaint").get(
+            complaint__id=complaint_id
+        )
+        bill = model_to_dict(bill)
+    except models.Bill.DoesNotExist:
+        return None, "Bill doesn't exist for this complaint", status.HTTP_404_NOT_FOUND
+    return bill, None, None
