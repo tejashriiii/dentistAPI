@@ -1,6 +1,7 @@
 from django.db import models
 from authentication.models import User
 import uuid
+from doctor.models import Treatment
 
 
 # ==============================NOTE====================================
@@ -66,17 +67,22 @@ class Diagnosis(models.Model):
     id: <UUID> (Primary key)
     complaint: <Complaint> (Foreign Key for User)
     tooth_number:<Int> when complaint was registered
-    diagnosis: <String> Description of diagnosis
+    treatment: <Treatment> (Foreight Key for treatment)
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE)
-    tooth_number = models.TextField(blank=True, max_length=25)
-    # Incase multiple teeth with same diagnosis operated together
-    diagnosis = models.TextField(max_length=50)
+    tooth_number = models.IntegerField()
+    treatment = models.ForeignKey(Treatment, on_delete=models.PROTECT)
 
     class Meta:
         db_table = "diagnosis"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["complaint", "tooth_number"],
+                name="unique_complaint+tooth_number",
+            )
+        ]
 
 
 class FollowUp(models.Model):

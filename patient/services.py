@@ -5,6 +5,7 @@ from . import serializers
 from . import utils
 from authentication.models import User
 from django.db import IntegrityError
+from rest_framework import status
 
 
 def capitalize_name(name, snake_case=False):
@@ -17,6 +18,174 @@ def capitalize_name(name, snake_case=False):
     for name in separated_name:
         capitalized_name += name
     return capitalized_name.strip()
+
+
+def serialize_identity(medical_data):
+    identity = serializers.PhoneNameSerializer(data=medical_data)
+    if not identity.is_valid():
+        return None, identity.error_messages
+    return identity.data, None
+
+
+def serialize_medical_details(medical_data):
+    """
+    1. Check identity validity (name, phonenumber)
+    2. Check medical_details validity (allergies, illnesses, smoking, tobacco, drinking)
+    """
+
+    identity_data, error = serialize_identity(medical_data.get("identity"))
+    if error:
+        return None, error
+
+    # Check for errors in medical_data
+    medical_details = serializers.MedicalDetailsSerializer(
+        data=medical_data.get("medical_details")
+    )
+    if not medical_details.is_valid():
+        return None, medical_details.error_messages
+
+    serialized_data = {
+        "identity": identity_data,
+        "medical_details": medical_details.data,
+    }
+    return serialized_data, None
+
+
+def fetch_details_object(name, phonenumber):
+    """
+    Using name and phonenumber fetch the details of a patient
+    """
+    try:
+        user_details = User.objects.select_related("details").get(
+            name=name,
+            phonenumber=phonenumber,
+        )
+    except User.DoesNotExist:
+        return "User not found", None
+    return None, user_details.details
+
+
+def add_medical_details(data):
+    """
+    1. Creates medical details for first time
+    1. Updates medical details if details already filled
+    """
+    error, user_details = fetch_details_object(
+        data["identity"].get("name"), data["identity"].get("phonenumber")
+    )
+    if error:
+        return error
+
+    # Bringing allergies and illnesses to csv format instead of lists
+    allergies, illnesses = "", ""
+    for allergy in data["medical_details"]["allergies"]:
+        allergies += allergy + ","
+    for illness in data["medical_details"]["illnesses"]:
+        illnesses += illness + ","
+
+    user_details.illnesses = illnesses[:-1]
+    user_details.allergies = allergies[:-1]
+    user_details.smoking = data["medical_details"]["smoking"]
+    user_details.tobacco = data["medical_details"]["tobacco"]
+    user_details.drinking = data["medical_details"]["drinking"]
+    user_details.save()
+    return None
+
+
+def fetch_medical_details(capitalized_name, phonenumber):
+    """
+    Fetch the medical details of patient
+    - illnesses, allergies, smoking, drinking, tobacco
+    """
+    error, user_details = fetch_details_object(capitalized_name, phonenumber)
+    if error:
+        return None, error
+
+    medical_details = {
+        "illnesses": user_details.illnesses.split(","),
+        "allergies": user_details.allergies.split(","),
+        "smoking": user_details.smoking,
+        "drinking": user_details.drinking,
+        "tobacco": user_details.tobacco,
+    }
+    return medical_details, None
+
+
+def fetch_diagnosis_by_complaint(complaint_id):
+    diagnoses = (
+        models.Diagnosis.objects.select_related("complaint")
+        .filter(complaint__id=complaint_id)
+        .values()
+    )
+    if not len(diagnoses):
+        return None, "Invalid complaint, no diagnosis found"
+    return diagnoses, None
+
+
+def create_diagnosis(diagnosis_data):
+    """
+    Create a new diagnosis entry in the database
+    1. Invalid treatment UUID
+    2. Invalid complaint UUID
+    3. Duplicate diagnosis (complaint+tooth should be unique)
+    3. Success
+    """
+    try:
+        complaint = models.Complaint.objects.get(id=diagnosis_data["complaint"])
+    except models.Complaint.DoesNotExist:
+        return (
+            f"For {diagnosis_data["tooth_number"]} Invalid chief-complaint",
+            status.HTTP_404_NOT_FOUND,
+        )
+    try:
+        treatment = models.Treatment.objects.get(id=diagnosis_data["treatment"])
+    except models.Treatment.DoesNotExist:
+        return (
+            f"For {diagnosis_data["tooth_number"]} Invalid chief-complaint",
+            status.HTTP_404_NOT_FOUND,
+        )
+    try:
+        models.Diagnosis.objects.create(
+            complaint=complaint,
+            treatment=treatment,
+            tooth_number=diagnosis_data["tooth_number"],
+        )
+    except IntegrityError:
+        return (
+            f"For {diagnosis_data["tooth_number"]
+                   } Duplicate diagnosis, diagnosis for this tooth already exists",
+            status.HTTP_409_CONFLICT,
+        )
+    return None, None
+
+
+def update_diagnosis(diagnosis_update_data):
+    try:
+        diagnosis_to_update = models.Diagnosis.objects.get(
+            id=diagnosis_update_data["id"]
+        )
+    except models.Diagnosis.DoesNotExist:
+        return "Diagnosis not found"
+    try:
+        updated_treatment = models.Treatment.objects.get(
+            id=diagnosis_update_data["treatment"]
+        )
+    except models.Treatment.DoesNotExist:
+        return "Treatment not found"
+
+    diagnosis_to_update.treatment = updated_treatment
+    diagnosis_to_update.save()
+    return None
+
+
+def delete_diagnosis(diagnosis_id):
+    try:
+        diagnosis_to_delete = models.Diagnosis.objects.get(id=diagnosis_id)
+    except models.Diagnosis.DoesNotExist:
+        return None, "Diagnosis not found"
+    tooth_number = diagnosis_to_delete.tooth_number
+    diagnosis_to_delete.delete()
+    return tooth_number, None
 
 
 def fetch_followups_by_date(date: datetime.datetime.date):
@@ -112,94 +281,3 @@ def update_followup(followup_data):
     followup_to_update.completed = followup_data["completed"]
     followup_to_update.save()
     return None
-
-
-def serialize_identity(medical_data):
-    identity = serializers.PhoneNameSerializer(data=medical_data)
-    if not identity.is_valid():
-        return None, identity.error_messages
-    return identity.data, None
-
-
-def serialize_medical_details(medical_data):
-    """
-    1. Check identity validity (name, phonenumber)
-    2. Check medical_details validity (allergies, illnesses, smoking, tobacco, drinking)
-    """
-
-    identity_data, error = serialize_identity(medical_data.get("identity"))
-    if error:
-        return None, error
-
-    # Check for errors in medical_data
-    medical_details = serializers.MedicalDetailsSerializer(
-        data=medical_data.get("medical_details")
-    )
-    if not medical_details.is_valid():
-        return None, medical_details.error_messages
-
-    serialized_data = {
-        "identity": identity_data,
-        "medical_details": medical_details.data,
-    }
-    return serialized_data, None
-
-
-def fetch_details_object(name, phonenumber):
-    """
-    Using name and phonenumber fetch the details of a patient
-    """
-    try:
-        user_details = User.objects.select_related("details").get(
-            name=name,
-            phonenumber=phonenumber,
-        )
-    except User.DoesNotExist:
-        return "User not found", None
-    return None, user_details.details
-
-
-def add_medical_details(data):
-    """
-    1. Creates medical details for first time
-    1. Updates medical details if details already filled
-    """
-    error, user_details = fetch_details_object(
-        data["identity"].get("name"), data["identity"].get("phonenumber")
-    )
-    if error:
-        return error
-
-    # Bringing allergies and illnesses to csv format instead of lists
-    allergies, illnesses = "", ""
-    for allergy in data["medical_details"]["allergies"]:
-        allergies += allergy + ","
-    for illness in data["medical_details"]["illnesses"]:
-        illnesses += illness + ","
-
-    user_details.illnesses = illnesses[:-1]
-    user_details.allergies = allergies[:-1]
-    user_details.smoking = data["medical_details"]["smoking"]
-    user_details.tobacco = data["medical_details"]["tobacco"]
-    user_details.drinking = data["medical_details"]["drinking"]
-    user_details.save()
-    return None
-
-
-def fetch_medical_details(capitalized_name, phonenumber):
-    """
-    Fetch the medical details of patient
-    - illnesses, allergies, smoking, drinking, tobacco
-    """
-    error, user_details = fetch_details_object(capitalized_name, phonenumber)
-    if error:
-        return None, error
-
-    medical_details = {
-        "illnesses": user_details.illnesses.split(","),
-        "allergies": user_details.allergies.split(","),
-        "smoking": user_details.smoking,
-        "drinking": user_details.drinking,
-        "tobacco": user_details.tobacco,
-    }
-    return medical_details, None

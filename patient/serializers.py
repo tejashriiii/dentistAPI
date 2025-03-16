@@ -12,8 +12,7 @@ class DetailsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Details
-        exclude = ["id", "allergies", "illnesses",
-                   "tobacco", "smoking", "drinking"]
+        exclude = ["id", "allergies", "illnesses", "tobacco", "smoking", "drinking"]
 
 
 class MedicalDetailsSerializer(serializers.Serializer):
@@ -25,10 +24,8 @@ class MedicalDetailsSerializer(serializers.Serializer):
     drinking: <Bool>
     """
 
-    allergies = serializers.ListField(
-        child=serializers.CharField(), default=[])
-    illnesses = serializers.ListField(
-        child=serializers.CharField(), default=[])
+    allergies = serializers.ListField(child=serializers.CharField(), default=[])
+    illnesses = serializers.ListField(child=serializers.CharField(), default=[])
     smoking = serializers.BooleanField(default=False)
     tobacco = serializers.BooleanField(default=False)
     drinking = serializers.BooleanField(default=False)
@@ -52,6 +49,28 @@ class PhoneNameSerializer(serializers.Serializer):
 
     phonenumber = serializers.IntegerField()
     name = serializers.CharField()
+
+
+class DiagnosisSerializer(serializers.Serializer):
+    """
+    treatment: <UUID> for treatment
+    complaint: <UUID> for complaint
+    tooth_number: <Integer>
+    """
+
+    treatment = serializers.UUIDField()
+    complaint = serializers.UUIDField()
+    tooth_number = serializers.IntegerField()
+
+
+class DiagnosisUpdateSerializer(serializers.Serializer):
+    """
+    id: <UUID> for diagnosis
+    treatment: <UUID> for treatment
+    """
+
+    treatment = serializers.UUIDField()
+    id = serializers.UUIDField()
 
 
 class FollowupSerializer(serializers.ModelSerializer):

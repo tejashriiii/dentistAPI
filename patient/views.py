@@ -238,6 +238,85 @@ def complaints(request):
         return Response({"message": "complaint registered"}, status=status.HTTP_200_OK)
 
 
+@api_view(["GET", "POST", "PUT", "DELETE"])
+@permission_classes((permissions.AllowAny,))
+def diagnosis(request, complaint_id=None, id=None):
+    """
+    1. GET: fetch by complaint_id
+    2. POST: add diagnosis for a particular complaint
+    Expected JSON:
+    {
+        "treatment": "21ed0219-6358-4555-9efe-b996d2e94508",
+        "complaint": "1002931f-d1b3-4408-9147-2e3432c67cc2",
+        "tooth_number": 44
+    }
+    3. PUT: change treatment (tooth no. change not possible only according to UI)
+    Expected JSON:
+    {
+      "treatment": "e886b9aa-1ffb-45af-9db2-86e177ef6b78",
+      "id": "e886b9aa-1ffb-45af-9db2-86e177ef6b78"
+    }
+    4. DELETE: deleting diagnosis for a tooth
+    """
+    if request.method == "GET":
+        token, error = jsonwebtokens.is_authorized(
+            request.headers.get("Authorization").split(" ")[1],
+            set(["dentist"]),
+        )
+        if error:
+            return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
+    if request.method == "GET":
+        if complaint_id:
+            diagnoses, error = services.fetch_diagnosis_by_complaint(complaint_id)
+            if error:
+                return Response(
+                    {"error": error},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            return Response({"diagnosis": diagnoses}, status=status.HTTP_200_OK)
+
+        return Response(
+            {"error": "Invalid complaint, no diagnosis present"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    elif request.method == "POST":
+        # serialize incoming data
+        diagnosis_serializer = serializers.DiagnosisSerializer(data=request.data)
+        if not diagnosis_serializer.is_valid():
+            return Response(
+                {"error": "Invalid fields, check all fields properly"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # create record in db
+        error, error_code = services.create_diagnosis(diagnosis_serializer.data)
+        if error:
+            return Response({"error": error}, status=error_code)
+        return Response({"message": "Diagnosis has been saved!"})
+
+    elif request.method == "PUT":
+        diagnosis_update = serializers.DiagnosisUpdateSerializer(data=request.data)
+        if not diagnosis_update.is_valid():
+            return Response({"error": "Invalid entry, recheck fields"})
+        error = services.update_diagnosis(diagnosis_update.data)
+        if error:
+            return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"message": "Diagnosis has been updated!"})
+
+    elif request.method == "DELETE":
+        if not id:
+            return Response(
+                {"error": "Diagnosis was not deleted"}, status=status.HTTP_404_NOT_FOUND
+            )
+        tooth_number, error = services.delete_diagnosis(id)
+        if error:
+            return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"success": f"Tooth {tooth_number}'s diagnosis deleted"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
 @api_view(["GET", "POST", "PUT"])
 @permission_classes((permissions.AllowAny,))
 def followups(request, complaint_id=None):
