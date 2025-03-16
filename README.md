@@ -18,9 +18,14 @@ conda activate dentist
 pip install -r requirements.txt
 ```
 
-4. **Change .env.example to .env and add proper environment variables according to your setup**
+4. Create database in postgres (via psql)
+```sql
+CREATE DATABASE dentist;
+```
 
-5. Make migrations
+5. **Change .env.example to .env and add proper environment variables according to your setup**
+
+6. Make migrations
 
 ```sh
 python manage.py makemigrations
@@ -41,7 +46,7 @@ python manage.py makemigrations doctor
 python manage.py makemigrations patient
 ```
 
-6. Migrate
+7. Migrate
 
 ```sh
 python manage.py migrate
@@ -51,7 +56,7 @@ python manage.py migrate
 python manage.py migrate django_celery_beat
 ```
 
-7. Create superuser
+8. Create superuser
 
 ```sh
 python manage.py createsuperuser
@@ -59,7 +64,7 @@ python manage.py createsuperuser
 
 (don't set email, set a simple username and password)
 
-8. Create roles
+9. Create roles
 
 ```sh
 python manage.py runserver
@@ -70,9 +75,14 @@ python manage.py runserver
 -  In the `Authentication` app add a doctor and admin
 -  **STRICTLY** Keep password field empty for all the users
 
-9. Populate tables
+
+10. Populate tables
 ```sh
 python manage.py populate_treatments
+```
+
+```sh
+python manage.py populate_prescriptions
 ```
 
 ## For testing whatsapp functionality (OPTIONAL for keeping development server online)
