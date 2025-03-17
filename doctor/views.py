@@ -33,15 +33,15 @@ def treatments(request, treatment_id=None):
     }
     """
     # JWT authentication
-    # token, error = jsonwebtokens.is_authorized(
-    #     request.headers["Authorization"].split(" ")[1], set(["dentist"])
-    #     )
-    # if error:
-    #     return Response(
-    #         {"error": error},
-    #         status=status.HTTP_401_UNAUTHORIZED,
-    #     )
-    #
+    token, error = jsonwebtokens.is_authorized(
+        request.headers["Authorization"].split(" ")[1], set(["dentist"])
+        )
+    if error:
+        return Response(
+            {"error": error},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
     if request.method == "GET":
         treatments = models.Treatment.objects.all().values()
         return Response({"treatments": treatments})
@@ -117,14 +117,14 @@ def prescriptions(request, prescription_id=None):
     }
     """
     # JWT authentication
-    # token, error = jsonwebtokens.is_authorized(
-    #     request.headers["Authorization"].split(" ")[1], set(["dentist"])
-    # )
-    # if error:
-    #     return Response(
-    #         {"error": error},
-    #         status=status.HTTP_401_UNAUTHORIZED,
-    #     )
+    token, error = jsonwebtokens.is_authorized(
+        request.headers["Authorization"].split(" ")[1], set(["dentist"])
+    )
+    if error:
+        return Response(
+            {"error": error},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
 
     if request.method == "GET":
         prescriptions = services.fetch_structured_prescriptions()
