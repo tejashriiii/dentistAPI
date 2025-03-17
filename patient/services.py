@@ -387,6 +387,22 @@ def create_bill(bill_data):
     return None, None
 
 
+def update_bill(bill_update_data):
+    """
+    Update bill's discount or diagnosis changed so bill updated
+    1. Invalid bill id
+    2. Success
+    """
+    try:
+        bill = models.Bill.objects.get(id=bill_update_data["id"])
+    except models.Bill.DoesNotExist:
+        return "Bill does not exist, cannot update"
+    bill.full_bill = bill_update_data["full_bill"]
+    bill.discount = bill_update_data["discount"]
+    bill.save()
+    return None
+
+
 def fetch_bill(complaint_id):
     """
     Fetch the bill given the complaint id

@@ -577,8 +577,7 @@ def bills(request, complaint_id=None):
     3. PUT: make updates to the bill if needed
     Expected JSON:
     {
-        "id": ""
-        "complaint": "728d2379-292f-4039-8983-24895e716c77",
+        "id": "fe48a6e0-e490-421e-bac0-eddea9478198"
         "full_bill": 4000,
         "discount": 1000,
     }
@@ -614,6 +613,22 @@ def bills(request, complaint_id=None):
         error, error_code = services.create_bill(bills_serializer.data)
         if error:
             return Response({"error": error}, status=error_code)
+        return Response(
+            {"message": "Bill has been saved!"},
+            status=status.HTTP_200_OK,
+        )
+
+    elif request.method == "PUT":
+        bills_update_serializer = serializers.BillUpdateSerializer(data=request.data)
+        if not bills_update_serializer.is_valid():
+            return Response(
+                {"error": "Invalid fields, check all fields again"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # save the record
+        error = services.update_bill(bills_update_serializer.data)
+        if error:
+            return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
         return Response(
             {"message": "Bill has been saved!"},
             status=status.HTTP_200_OK,
