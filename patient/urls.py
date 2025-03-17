@@ -2,9 +2,6 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path("<int:phonenumber>/", views.patients),
-    path("<str:name>/", views.patients),
-    path("<int:phonenumber>/<str:name>/", views.patients),
     path("details/", views.details),
     path("medical_details/", views.medical_details),
     path("medical_details/<int:phonenumber>/<str:name>/", views.medical_details),
@@ -16,4 +13,7 @@ urlpatterns = [
     path("diagnosis/delete/<uuid:id>/", views.diagnosis),
     path("bill/", views.bills),
     path("bill/<uuid:complaint_id>/", views.bills),
+    path("<int:phonenumber>/", views.patients),
+    path("<str:name>/", views.patients),
+    path("<int:phonenumber>/<str:name>/", views.patients),
 ]
