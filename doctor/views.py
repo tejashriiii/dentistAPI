@@ -35,7 +35,7 @@ def treatments(request, treatment_id=None):
     # JWT authentication
     token, error = jsonwebtokens.is_authorized(
         request.headers["Authorization"].split(" ")[1], set(["dentist"])
-    )
+        )
     if error:
         return Response(
             {"error": error},
@@ -69,6 +69,10 @@ def treatments(request, treatment_id=None):
 
         # create record
         treatment_serializer.save()
+        return Response(
+                {"success": f"Treatment New Added"},
+                status=status.HTTP_200_OK,
+                )
 
     elif request.method == "PUT":
         treatment_serializer = serializers.TreatmentUpdateSerializer(
@@ -153,7 +157,7 @@ def prescriptions(request, prescription_id=None):
         )
     elif request.method == "PUT":
         prescription_serializer = serializers.PrescriptionUpdateSerializer(
-            data=request.data["prescription"]
+            data = request.data
         )
         if not prescription_serializer.is_valid():
             return Response(
