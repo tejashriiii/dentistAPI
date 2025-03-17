@@ -5,6 +5,7 @@ from . import serializers
 from . import utils
 from authentication.models import User
 from django.db import IntegrityError
+from django.db.models import F
 from django.forms.models import model_to_dict
 from rest_framework import status
 
@@ -12,15 +13,92 @@ from rest_framework import status
 def capitalize_name(name, snake_case=False):
     separated_name = []
     if snake_case:
-        separated_name = list(
-            map(lambda x: x.capitalize() + " ", name.split("_")))
+        separated_name = list(map(lambda x: x.capitalize() + " ", name.split("_")))
     else:
-        separated_name = list(
-            map(lambda x: x.capitalize() + " ", name.split()))
+        separated_name = list(map(lambda x: x.capitalize() + " ", name.split()))
     capitalized_name = ""
     for name in separated_name:
         capitalized_name += name
     return capitalized_name.strip()
+
+
+def fetch_patients_with_phone_and_name(phonenumber, name):
+    patients = (
+        models.Details.objects.select_related("user")
+        .filter(id__phonenumber=phonenumber, id__name__icontains=name)
+        .annotate(name=F("id_id__name"), phonenumber=F("id_id__phonenumber"))
+        .values(
+            "name",
+            "phonenumber",
+            "date_of_birth",
+            "address",
+            "gender",
+            "allergies",
+            "illnesses",
+            "smoking",
+            "drinking",
+            "tobacco",
+        )
+    )
+    if not len(patients):
+        return (
+            None,
+            f"No patients found with name: {
+                name} and phonenumber: {phonenumber}",
+        )
+    return patients, None
+
+
+def fetch_patients_with_phone(phonenumber):
+    patients = (
+        models.Details.objects.select_related("user")
+        .filter(id__phonenumber=phonenumber)
+        .annotate(name=F("id_id__name"), phonenumber=F("id_id__phonenumber"))
+        .values(
+            "name",
+            "phonenumber",
+            "date_of_birth",
+            "address",
+            "gender",
+            "allergies",
+            "illnesses",
+            "smoking",
+            "drinking",
+            "tobacco",
+        )
+    )
+    if not len(patients):
+        return (
+            None,
+            f"No patients found with phonenumber: {phonenumber}",
+        )
+    return patients, None
+
+
+def fetch_patients_with_name(name):
+    patients = (
+        models.Details.objects.select_related("user")
+        .filter(id__name__icontains=name)
+        .annotate(name=F("id_id__name"), phonenumber=F("id_id__phonenumber"))
+        .values(
+            "name",
+            "phonenumber",
+            "date_of_birth",
+            "address",
+            "gender",
+            "allergies",
+            "illnesses",
+            "smoking",
+            "drinking",
+            "tobacco",
+        )
+    )
+    if not len(patients):
+        return (
+            None,
+            f"No patients found with name: {name}",
+        )
+    return patients, None
 
 
 def serialize_identity(medical_data):
@@ -134,16 +212,14 @@ def create_diagnosis(diagnosis_data):
     3. Success
     """
     try:
-        complaint = models.Complaint.objects.get(
-            id=diagnosis_data["complaint"])
+        complaint = models.Complaint.objects.get(id=diagnosis_data["complaint"])
     except models.Complaint.DoesNotExist:
         return (
             f"For {diagnosis_data["tooth_number"]} Invalid chief-complaint",
             status.HTTP_404_NOT_FOUND,
         )
     try:
-        treatment = models.Treatment.objects.get(
-            id=diagnosis_data["treatment"])
+        treatment = models.Treatment.objects.get(id=diagnosis_data["treatment"])
     except models.Treatment.DoesNotExist:
         return (
             f"For {diagnosis_data["tooth_number"]} Invalid chief-complaint",
@@ -276,8 +352,7 @@ def update_followup(followup_data):
     description, completed, date, time
     """
     try:
-        followup_to_update = models.FollowUp.objects.get(
-            id=followup_data["id"])
+        followup_to_update = models.FollowUp.objects.get(id=followup_data["id"])
     except models.FollowUp.DoesNotExist:
         "Invalid followup, it does not exist"
 

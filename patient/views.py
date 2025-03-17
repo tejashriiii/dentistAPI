@@ -16,25 +16,60 @@ from . import utils
 
 @api_view(["GET"])
 @permission_classes((permissions.AllowAny,))
-def patients(request, phonenumber=None, active=None):
+def patients(request, phonenumber=None, name=None):
     """
-    1. Retrieve single patient
-    2. Retrieve many patients
+    --------HERE NAME IN THE PATH SHOULD BE IN LOWERCASE-SNAKECASE--------
+    eg: John Doe (normal name) -> john_doe(lowercase-snakecase)
+    1. Name and Phonenumber
+    2. Name
+    3. Phonenumber
     """
     # Make sure user is admin or doctor
+    token, error = jsonwebtokens.is_authorized(
+        request.headers["Authorization"].split(" ")[1], set(["admin", "dentist"])
+    )
+    if error:
+        return Response(
+            {"error": error},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
 
     if request.method == "GET":
-        # Fetch single patient
+        # Convert data to proper format
         if phonenumber:
-            patient = models.Details.objects.filter(
-                id__phonenumber=phonenumber
-            ).values()
-            return Response({"patient": patient}, status=status.HTTP_200_OK)
+            is_valid_phonenumber: validation.FieldValidity = (
+                validation.validate_phonenumber(int(phonenumber))
+            )
+
+            if not is_valid_phonenumber["valid"]:
+                return Response(
+                    {"error": is_valid_phonenumber["error"]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        if name:
+            name = services.capitalize_name(name, snake_case=True)
+
+        patients, no_match_error = {}, ""
+        if phonenumber and name:
+            patients, no_match_error = services.fetch_patients_with_phone_and_name(
+                phonenumber, name
+            )
+        elif phonenumber:
+            patients, no_match_error = services.fetch_patients_with_phone(phonenumber)
+        elif name:
+            patients, no_match_error = services.fetch_patients_with_name(name)
+        else:
+            return Response(
+                {"error": "Provide atleast name or phonenumber to search"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if no_match_error:
+            return Response({"error": no_match_error}, status=status.HTTP_200_OK)
+        return Response({"patients": patients}, status=status.HTTP_200_OK)
 
     # JWT authentication
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(
-            " ")[1], set(["dentist", "admin"])
+        request.headers["Authorization"].split(" ")[1], set(["dentist", "admin"])
     )
     if error:
         return Response(
@@ -89,8 +124,7 @@ def details(request):
         try:
             user_object = auth.User.objects.create(
                 phonenumber=phonenumber,
-                name=services.capitalize_name(
-                    request.data.get("details").get("name")),
+                name=services.capitalize_name(request.data.get("details").get("name")),
                 role="patient",
                 password="",
             )
@@ -166,8 +200,7 @@ def complaints(request):
     """
     # Make sure user is admin or dentist
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(
-            " ")[1], set(["admin", "dentist"])
+        request.headers["Authorization"].split(" ")[1], set(["admin", "dentist"])
     )
     if error:
         return Response(
@@ -270,8 +303,7 @@ def diagnosis(request, complaint_id=None, id=None):
             return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
     if request.method == "GET":
         if complaint_id:
-            diagnoses, error = services.fetch_diagnosis_by_complaint(
-                complaint_id)
+            diagnoses, error = services.fetch_diagnosis_by_complaint(complaint_id)
             if error:
                 return Response(
                     {"error": error},
@@ -286,23 +318,20 @@ def diagnosis(request, complaint_id=None, id=None):
 
     elif request.method == "POST":
         # serialize incoming data
-        diagnosis_serializer = serializers.DiagnosisSerializer(
-            data=request.data)
+        diagnosis_serializer = serializers.DiagnosisSerializer(data=request.data)
         if not diagnosis_serializer.is_valid():
             return Response(
                 {"error": "Invalid fields, check all fields properly"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         # create record in db
-        error, error_code = services.create_diagnosis(
-            diagnosis_serializer.data)
+        error, error_code = services.create_diagnosis(diagnosis_serializer.data)
         if error:
             return Response({"error": error}, status=error_code)
         return Response({"message": "Diagnosis has been saved!"})
 
     elif request.method == "PUT":
-        diagnosis_update = serializers.DiagnosisUpdateSerializer(
-            data=request.data)
+        diagnosis_update = serializers.DiagnosisUpdateSerializer(data=request.data)
         if not diagnosis_update.is_valid():
             return Response({"error": "Invalid entry, recheck fields"})
         error = services.update_diagnosis(diagnosis_update.data)
@@ -368,8 +397,7 @@ def followups(request, complaint_id=None):
         if complaint_id:
             # the url already verifies that UUID is valid so no checking needed
             # fetch all followups for that complaint_id
-            past_followups, error = services.fetch_followups_by_complaint(
-                complaint_id)
+            past_followups, error = services.fetch_followups_by_complaint(complaint_id)
             if error:
                 return Response(
                     {"error": error},
@@ -484,8 +512,7 @@ def medical_details(request, name=None, phonenumber=None):
                 request.headers.get("Authorization").split(" ")[1],
             )
             data, error = services.serialize_identity(
-                {"name": token.get("name"),
-                 "phonenumber": token.get("phonenumber")}
+                {"name": token.get("name"), "phonenumber": token.get("phonenumber")}
             )
             if error:
                 return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
