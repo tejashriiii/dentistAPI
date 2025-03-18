@@ -26,7 +26,8 @@ def patients(request, phonenumber=None, name=None):
     """
     # Make sure user is admin or doctor
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(" ")[1], set(["admin", "dentist"])
+        request.headers["Authorization"].split(
+            " ")[1], set(["admin", "dentist"])
     )
     if error:
         return Response(
@@ -55,7 +56,8 @@ def patients(request, phonenumber=None, name=None):
                 phonenumber, name
             )
         elif phonenumber:
-            patients, no_match_error = services.fetch_patients_with_phone(phonenumber)
+            patients, no_match_error = services.fetch_patients_with_phone(
+                phonenumber)
         elif name:
             patients, no_match_error = services.fetch_patients_with_name(name)
         else:
@@ -69,7 +71,8 @@ def patients(request, phonenumber=None, name=None):
 
     # JWT authentication
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(" ")[1], set(["dentist", "admin"])
+        request.headers["Authorization"].split(
+            " ")[1], set(["dentist", "admin"])
     )
     if error:
         return Response(
@@ -124,7 +127,8 @@ def details(request):
         try:
             user_object = auth.User.objects.create(
                 phonenumber=phonenumber,
-                name=services.capitalize_name(request.data.get("details").get("name")),
+                name=services.capitalize_name(
+                    request.data.get("details").get("name")),
                 role="patient",
                 password="",
             )
@@ -200,7 +204,8 @@ def complaints(request):
     """
     # Make sure user is admin or dentist
     token, error = jsonwebtokens.is_authorized(
-        request.headers["Authorization"].split(" ")[1], set(["admin", "dentist"])
+        request.headers["Authorization"].split(
+            " ")[1], set(["admin", "dentist"])
     )
     if error:
         return Response(
@@ -303,7 +308,8 @@ def diagnosis(request, complaint_id=None, id=None):
             return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
     if request.method == "GET":
         if complaint_id:
-            diagnoses, error = services.fetch_diagnosis_by_complaint(complaint_id)
+            diagnoses, error = services.fetch_diagnosis_by_complaint(
+                complaint_id)
             if error:
                 return Response(
                     {"error": error},
@@ -318,20 +324,23 @@ def diagnosis(request, complaint_id=None, id=None):
 
     elif request.method == "POST":
         # serialize incoming data
-        diagnosis_serializer = serializers.DiagnosisSerializer(data=request.data)
+        diagnosis_serializer = serializers.DiagnosisSerializer(
+            data=request.data)
         if not diagnosis_serializer.is_valid():
             return Response(
                 {"error": "Invalid fields, check all fields properly"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         # create record in db
-        error, error_code = services.create_diagnosis(diagnosis_serializer.data)
+        error, error_code = services.create_diagnosis(
+            diagnosis_serializer.data)
         if error:
             return Response({"error": error}, status=error_code)
         return Response({"message": "Diagnosis has been saved!"})
 
     elif request.method == "PUT":
-        diagnosis_update = serializers.DiagnosisUpdateSerializer(data=request.data)
+        diagnosis_update = serializers.DiagnosisUpdateSerializer(
+            data=request.data)
         if not diagnosis_update.is_valid():
             return Response({"error": "Invalid entry, recheck fields"})
         error = services.update_diagnosis(diagnosis_update.data)
@@ -397,7 +406,8 @@ def followups(request, complaint_id=None):
         if complaint_id:
             # the url already verifies that UUID is valid so no checking needed
             # fetch all followups for that complaint_id
-            past_followups, error = services.fetch_followups_by_complaint(complaint_id)
+            past_followups, error = services.fetch_followups_by_complaint(
+                complaint_id)
             if error:
                 return Response(
                     {"error": error},
@@ -512,7 +522,8 @@ def medical_details(request, name=None, phonenumber=None):
                 request.headers.get("Authorization").split(" ")[1],
             )
             data, error = services.serialize_identity(
-                {"name": token.get("name"), "phonenumber": token.get("phonenumber")}
+                {"name": token.get("name"),
+                 "phonenumber": token.get("phonenumber")}
             )
             if error:
                 return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
@@ -549,16 +560,22 @@ def medical_details(request, name=None, phonenumber=None):
 
 @api_view(["GET", "POST"])
 @permission_classes((permissions.AllowAny,))
-def patient_history(request):
+def patient_history(request, patient_id=None):
     """
     Get list of all complaints and followups for a particular patient
     """
     if request.method == "GET":
-        phonenumber = request.GET.get("phonenumber")
-        name = request.GET.get("name")
-        if phonenumber and name:
-            pass
-    pass
+        if not patient_id:
+            return Response(
+                {"error": "Couldn't find patient's history"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        patient_history, error = services.fetch_complaint_and_followup_history(
+            patient_id
+        )
+        if error:
+            return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"history": patient_history}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET", "POST", "PUT"])
@@ -619,7 +636,8 @@ def bills(request, complaint_id=None):
         )
 
     elif request.method == "PUT":
-        bills_update_serializer = serializers.BillUpdateSerializer(data=request.data)
+        bills_update_serializer = serializers.BillUpdateSerializer(
+            data=request.data)
         if not bills_update_serializer.is_valid():
             return Response(
                 {"error": "Invalid fields, check all fields again"},

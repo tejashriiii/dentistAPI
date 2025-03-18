@@ -13,9 +13,11 @@ from rest_framework import status
 def capitalize_name(name, snake_case=False):
     separated_name = []
     if snake_case:
-        separated_name = list(map(lambda x: x.capitalize() + " ", name.split("_")))
+        separated_name = list(
+            map(lambda x: x.capitalize() + " ", name.split("_")))
     else:
-        separated_name = list(map(lambda x: x.capitalize() + " ", name.split()))
+        separated_name = list(
+            map(lambda x: x.capitalize() + " ", name.split()))
     capitalized_name = ""
     for name in separated_name:
         capitalized_name += name
@@ -28,6 +30,7 @@ def fetch_patients_with_phone_and_name(phonenumber, name):
         .filter(id__phonenumber=phonenumber, id__name__icontains=name)
         .annotate(name=F("id_id__name"), phonenumber=F("id_id__phonenumber"))
         .values(
+            "id",
             "name",
             "phonenumber",
             "date_of_birth",
@@ -55,6 +58,7 @@ def fetch_patients_with_phone(phonenumber):
         .filter(id__phonenumber=phonenumber)
         .annotate(name=F("id_id__name"), phonenumber=F("id_id__phonenumber"))
         .values(
+            "id",
             "name",
             "phonenumber",
             "date_of_birth",
@@ -81,6 +85,7 @@ def fetch_patients_with_name(name):
         .filter(id__name__icontains=name)
         .annotate(name=F("id_id__name"), phonenumber=F("id_id__phonenumber"))
         .values(
+            "id",
             "name",
             "phonenumber",
             "date_of_birth",
@@ -99,6 +104,39 @@ def fetch_patients_with_name(name):
             f"No patients found with name: {name}",
         )
     return patients, None
+
+
+def fetch_complaint_and_followup_history(patient_id):
+    """
+    - Fetch complaints and followups for given patient
+    1. Invaild patient_id
+    2. Success
+    """
+    try:
+        patient = User.objects.get(id=patient_id)
+    except User.DoesNotExist:
+        return None, "This patient does not exist"
+    complaints = models.Complaint.objects.filter(user=patient)
+    complaint_followup_mapping = []
+    for complaint in complaints:
+        followups_by_complaint = (
+            models.FollowUp.objects.filter(complaint=complaint)
+            .values("title", "date", "completed", "number")
+            .order_by("number")
+        )
+        complaint_details = {
+            "complaint": complaint.complaint,
+            "date": complaint.date,
+        }
+        complaint_followup_mapping.append(
+            {
+                str(complaint.id): {
+                    "complaint_details": complaint_details,
+                    "followups": followups_by_complaint,
+                }
+            }
+        )
+    return complaint_followup_mapping, None
 
 
 def serialize_identity(medical_data):
@@ -212,14 +250,16 @@ def create_diagnosis(diagnosis_data):
     3. Success
     """
     try:
-        complaint = models.Complaint.objects.get(id=diagnosis_data["complaint"])
+        complaint = models.Complaint.objects.get(
+            id=diagnosis_data["complaint"])
     except models.Complaint.DoesNotExist:
         return (
             f"For {diagnosis_data["tooth_number"]} Invalid chief-complaint",
             status.HTTP_404_NOT_FOUND,
         )
     try:
-        treatment = models.Treatment.objects.get(id=diagnosis_data["treatment"])
+        treatment = models.Treatment.objects.get(
+            id=diagnosis_data["treatment"])
     except models.Treatment.DoesNotExist:
         return (
             f"For {diagnosis_data["tooth_number"]} Invalid chief-complaint",
@@ -352,7 +392,8 @@ def update_followup(followup_data):
     description, completed, date, time
     """
     try:
-        followup_to_update = models.FollowUp.objects.get(id=followup_data["id"])
+        followup_to_update = models.FollowUp.objects.get(
+            id=followup_data["id"])
     except models.FollowUp.DoesNotExist:
         "Invalid followup, it does not exist"
 

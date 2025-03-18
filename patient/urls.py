@@ -13,6 +13,7 @@ urlpatterns = [
     path("diagnosis/delete/<uuid:id>/", views.diagnosis),
     path("bill/", views.bills),
     path("bill/<uuid:complaint_id>/", views.bills),
+    path("history/<uuid:patient_id>/", views.patient_history),
     path("<int:phonenumber>/", views.patients),
     path("<str:name>/", views.patients),
     path("<int:phonenumber>/<str:name>/", views.patients),
