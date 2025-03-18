@@ -1,6 +1,7 @@
 import datetime
 import uuid
 from . import models
+from doctor import models as doc_models
 from . import serializers
 from . import utils
 from authentication.models import User
@@ -13,11 +14,9 @@ from rest_framework import status
 def capitalize_name(name, snake_case=False):
     separated_name = []
     if snake_case:
-        separated_name = list(
-            map(lambda x: x.capitalize() + " ", name.split("_")))
+        separated_name = list(map(lambda x: x.capitalize() + " ", name.split("_")))
     else:
-        separated_name = list(
-            map(lambda x: x.capitalize() + " ", name.split()))
+        separated_name = list(map(lambda x: x.capitalize() + " ", name.split()))
     capitalized_name = ""
     for name in separated_name:
         capitalized_name += name
@@ -250,16 +249,14 @@ def create_diagnosis(diagnosis_data):
     3. Success
     """
     try:
-        complaint = models.Complaint.objects.get(
-            id=diagnosis_data["complaint"])
+        complaint = models.Complaint.objects.get(id=diagnosis_data["complaint"])
     except models.Complaint.DoesNotExist:
         return (
             f"For {diagnosis_data["tooth_number"]} Invalid chief-complaint",
             status.HTTP_404_NOT_FOUND,
         )
     try:
-        treatment = models.Treatment.objects.get(
-            id=diagnosis_data["treatment"])
+        treatment = models.Treatment.objects.get(id=diagnosis_data["treatment"])
     except models.Treatment.DoesNotExist:
         return (
             f"For {diagnosis_data["tooth_number"]} Invalid chief-complaint",
@@ -325,6 +322,8 @@ def fetch_followups_by_date(date: datetime.datetime.date):
                 "phonenumber": followup.complaint.user.phonenumber,
                 "time": followup.time,
                 "followup": followup.title,
+                "complaint": followup.complaint.id,
+                "sitting": followup.number,
             }
         )
     if not formatted_followups:
@@ -392,8 +391,7 @@ def update_followup(followup_data):
     description, completed, date, time
     """
     try:
-        followup_to_update = models.FollowUp.objects.get(
-            id=followup_data["id"])
+        followup_to_update = models.FollowUp.objects.get(id=followup_data["id"])
     except models.FollowUp.DoesNotExist:
         "Invalid followup, it does not exist"
 
@@ -458,3 +456,77 @@ def fetch_bill(complaint_id):
     except models.Bill.DoesNotExist:
         return None, "Bill doesn't exist for this complaint", status.HTTP_404_NOT_FOUND
     return bill, None, None
+
+
+def create_patient_prescription(patient_prescription_data):
+    """
+    Create a prescription entry for a certain sitting of complaint
+    1. Invalid complaint
+    2. Invalid prescription
+    3. Integrity error with duplicate medication
+    4. Success
+    """
+    try:
+        complaint = models.Complaint.objects.get(
+            id=patient_prescription_data["complaint"]
+        )
+    except models.Complaint.DoesNotExist:
+        return "Invalid complaint, coudn't save prescription", status.HTTP_404_NOT_FOUND
+    try:
+        prescription = doc_models.Prescription.objects.get(
+            id=patient_prescription_data["prescription"]
+        )
+    except doc_models.Prescription.DoesNotExist:
+        return (
+            "Invalid medication, coudn't save prescription",
+            status.HTTP_404_NOT_FOUND,
+        )
+    try:
+        models.PatientPrescription.objects.create(
+            complaint=complaint,
+            prescription=prescription,
+            sitting=patient_prescription_data["sitting"],
+            days=patient_prescription_data["days"],
+            dosage=patient_prescription_data["dosage"],
+        )
+    except IntegrityError:
+        return (
+            f"{prescription.name} is a duplicate entry cannot save it",
+            status.HTTP_404_NOT_FOUND,
+        )
+    return None, None
+
+
+def fetch_patients_prescription(complaint_id, sitting):
+    """
+    1. Invalid complaint_id
+    2. Invalid sitting
+    3. Success
+    """
+    try:
+        complaint = models.Complaint.objects.get(id=complaint_id)
+    except models.Complaint.DoesNotExist:
+        return None, "Invalid complaint, no prescription found"
+
+    # Only check incase its followup and not initial complaint
+    if sitting:
+        try:
+            models.FollowUp.objects.get(complaint=complaint, number=sitting)
+        except models.FollowUp.DoesNotExist:
+            return (
+                None,
+                "Invalid followup, no prescription found",
+            )
+
+    try:
+        patient_prescription = models.PatientPrescription.objects.get(
+            complaint=complaint, sitting=sitting
+        )
+        patient_prescription = model_to_dict(patient_prescription)
+    except models.PatientPrescription.DoesNotExist:
+        return (
+            None,
+            "Prescription is not set for this sitting",
+        )
+
+    return patient_prescription, None

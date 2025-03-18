@@ -125,3 +125,22 @@ class BillUpdateSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     full_bill = serializers.IntegerField()
     discount = serializers.IntegerField()
+
+
+class PatientPrescriptionSerializer(serializers.Serializer):
+    """
+    complaint: <UUID>
+    prescription: <UUID>
+    days: <Integer>
+    dosage: <Integer>
+    dosage: <OD | BD | TD | Half BD | Half TD | "">
+    """
+
+    complaint = serializers.UUIDField()
+    sitting = serializers.IntegerField()
+    prescription = serializers.UUIDField()
+    days = serializers.IntegerField()
+    dosage = serializers.ChoiceField(
+        choices=models.PatientPrescription.DosageChoices.choices,
+        default=models.PatientPrescription.DosageChoices.EMPTY,
+    )

@@ -1,7 +1,7 @@
 from django.db import models
 from authentication.models import User
 import uuid
-from doctor.models import Treatment
+from doctor.models import Treatment, Prescription
 
 
 # ==============================NOTE====================================
@@ -130,3 +130,40 @@ class Bill(models.Model):
 
     class Meta:
         db_table = "bills"
+
+
+class PatientPrescription(models.Model):
+    """
+    id: <UUID>
+    complaint: <Complaint>
+    sitting: = 0 for complaint, >= 1 for followups
+    prescription: <Prescription>
+    days: <Integer>
+    dosage: <OD | BD | TD | Half BD | Half TD | "">
+    """
+
+    class DosageChoices(models.TextChoices):
+        OD = "OD"
+        BD = "BD"
+        TD = "TD"
+        HALF_BD = "HALF BD"
+        HALF_TDS = "HALF TDS"
+        EMPTY = ""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE)
+    sitting = models.IntegerField()
+    prescription = models.ForeignKey(Prescription, on_delete=models.PROTECT)
+    days = models.IntegerField()
+    dosage = models.CharField(
+        max_length=10, choices=DosageChoices.choices, default=DosageChoices.EMPTY
+    )
+
+    class Meta:
+        db_table = "patient_prescriptions"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["complaint", "sitting", "prescription"],
+                name="unique_complaint+sitting+prescription",
+            )
+        ]
