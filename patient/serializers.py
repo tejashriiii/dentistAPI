@@ -144,3 +144,20 @@ class PatientPrescriptionSerializer(serializers.Serializer):
         choices=models.PatientPrescription.DosageChoices.choices,
         default=models.PatientPrescription.DosageChoices.EMPTY,
     )
+
+
+class PatientPrescriptionUpdateSerializer(serializers.Serializer):
+    """
+    id: <UUID>
+    prescription: <UUID>
+    days: <Integer>
+    dosage: <Integer>
+    """
+
+    id = serializers.UUIDField()
+    prescription = serializers.UUIDField()
+    days = serializers.IntegerField()
+    dosage = serializers.ChoiceField(
+        choices=models.PatientPrescription.DosageChoices.choices,
+        default=models.PatientPrescription.DosageChoices.EMPTY,
+    )

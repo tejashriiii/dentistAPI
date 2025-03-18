@@ -497,7 +497,7 @@ def create_patient_prescription(patient_prescription_data):
     return None, None
 
 
-def fetch_patients_prescription(complaint_id, sitting):
+def fetch_patients_prescriptions(complaint_id, sitting):
     """
     1. Invalid complaint_id
     2. Invalid sitting
@@ -530,3 +530,56 @@ def fetch_patients_prescription(complaint_id, sitting):
         )
 
     return patient_prescription, None
+
+
+def update_patients_prescription(serializer_data):
+    """
+    Update prescription given data
+    {id, prescription, days, dosage}
+    1. Invalid patient_prescription
+    2. Invalid prescription_id
+    3. Success
+    """
+    try:
+        patient_prescription = models.PatientPrescription.objects.get(
+            id=serializer_data["id"]
+        )
+    except models.PatientPrescription.DoesNotExist:
+        return "Invalid Prescription entry, coudn't update", status.HTTP_404_NOT_FOUND
+    try:
+        prescription = doc_models.Prescription.objects.get(
+            id=serializer_data["prescription"]
+        )
+    except doc_models.Prescription.DoesNotExist:
+        return (
+            "Invalid medication, coudn't save prescription",
+            status.HTTP_404_NOT_FOUND,
+        )
+    try:
+        patient_prescription.prescription = prescription
+        patient_prescription.dosage = serializer_data["dosage"]
+        patient_prescription.days = serializer_data["days"]
+        patient_prescription.save()
+    except IntegrityError:
+        return (
+            f"{prescription.name} is a duplicate entry cannot save it",
+            status.HTTP_404_NOT_FOUND,
+        )
+    return None, None
+
+
+def delete_patient_prescription(patient_prescription_id):
+    """
+    Delete a prescription from patient's complaint/followup
+    1. That medication does not exist in the patient's prescription
+    2. Success
+    """
+    try:
+        patient_prescription = models.PatientPrescription.objects.get(
+            id=patient_prescription_id
+        )
+    except models.PatientPrescription.DoesNotExist:
+        return None, "Couldn't delete medication"
+    name = patient_prescription.prescription.name
+    patient_prescription.delete()
+    return name, None

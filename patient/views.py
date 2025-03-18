@@ -649,7 +649,9 @@ def bills(request, complaint_id=None):
 
 @api_view(["GET", "POST", "PUT", "DELETE"])
 @permission_classes((permissions.AllowAny,))
-def prescription(request, complaint_id=None, sitting=None):
+def prescription(
+    request, patient_prescription_id=None, complaint_id=None, sitting=None
+):
     """
     - Prescription is mapped to sitting and not a complaint
     1. GET: Get the prescription for a particular sitting
@@ -665,8 +667,6 @@ def prescription(request, complaint_id=None, sitting=None):
     3. PUT
     {
         "id": <UUID>,
-        "complaint": complaint,
-        "sitting": 0,
         "prescription": prescription_id,
         "days": 3,
         "dosage": "OD"
@@ -679,7 +679,7 @@ def prescription(request, complaint_id=None, sitting=None):
                 {"error": "Couldn't fetch prescriptions for undefined sitting"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        prescription, error = services.fetch_patients_prescription(
+        prescription, error = services.fetch_patients_prescriptions(
             complaint_id, sitting
         )
         if error:
@@ -703,3 +703,27 @@ def prescription(request, complaint_id=None, sitting=None):
         if error:
             return Response({"error": error}, status=error_code)
         return Response({"success": "Saved prescription!"})
+
+    if request.method == "PUT":
+        # serialize data
+        patient_prescription_update_serializer = (
+            serializers.PatientPrescriptionUpdateSerializer(data=request.data)
+        )
+        if not patient_prescription_update_serializer.is_valid():
+            return Response(
+                {"error": "Invalid field, check all fields properly"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # update record
+        error, error_code = services.update_patients_prescription(
+            patient_prescription_update_serializer.data
+        )
+        if error:
+            return Response({"error": error}, status=error_code)
+        return Response({"success": "Updated prescription!"})
+
+    if request.method == "DELETE":
+        name, error = services.delete_patient_prescription(patient_prescription_id)
+        if error:
+            return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"success": f"Deleted prescription {name}!"})
