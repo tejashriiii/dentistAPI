@@ -48,6 +48,7 @@ class Complaint(models.Model):
     id: <UUID> (Primary key)
     user: <UUID> (Foreign Key for User)
     complaint: <String> Description of complaint
+    description: <String> What doctor did during sitting
     date:<Date> when complaint was registered
     time: <Time> when complaint was registered
     """
@@ -55,6 +56,7 @@ class Complaint(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     complaint = models.TextField()
+    description = models.TextField(default="")
     date = models.DateField(auto_now=True)
     time = models.TimeField(auto_now=True, blank=True)
 

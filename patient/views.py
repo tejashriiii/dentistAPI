@@ -218,6 +218,7 @@ def complaints(request):
         for complaint in all_complaints:
             complaints.append(
                 {
+                    "id": complaint.id,
                     "name": complaint.user.name,
                     "age": utils.get_age(complaint.user.details.date_of_birth),
                     "phonenumber": complaint.user.phonenumber,
@@ -355,7 +356,7 @@ def diagnosis(request, complaint_id=None, id=None):
 
 @api_view(["GET", "POST", "PUT"])
 @permission_classes((permissions.AllowAny,))
-def followups(request, complaint_id=None):
+def followups(request, complaint_id=None, date=None):
     """
     1. GET:
         a. Fetch all followups for that day (for admin-dentist waiting list)
@@ -397,16 +398,15 @@ def followups(request, complaint_id=None):
         if complaint_id:
             # the url already verifies that UUID is valid so no checking needed
             # fetch all followups for that complaint_id
-            past_followups, error = services.fetch_followups_by_complaint(complaint_id)
-            if error:
-                return Response(
-                    {"error": error},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
+            past_followups = services.fetch_followups_by_complaint(complaint_id)
             return Response(
                 {"followups": past_followups},
                 status=status.HTTP_200_OK,
             )
+        if date:
+            # fetching followups for a particular date
+            today_followups = services.fetch_followups_by_date(date)
+            return Response({"followups": today_followups}, status=status.HTTP_200_OK)
 
         # fetching followups for dashboard
         today_date = datetime.datetime.now().date()

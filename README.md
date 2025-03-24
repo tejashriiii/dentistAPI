@@ -19,6 +19,7 @@ pip install -r requirements.txt
 ```
 
 4. Create database in postgres (via psql)
+
 ```sql
 CREATE DATABASE dentist;
 ```
@@ -42,6 +43,7 @@ python manage.py makemigrations messaging
 ```sh
 python manage.py makemigrations doctor
 ```
+
 ```sh
 python manage.py makemigrations patient
 ```
@@ -64,19 +66,8 @@ python manage.py createsuperuser
 
 (don't set email, set a simple username and password)
 
-9. Create roles
+9. Populate tables
 
-```sh
-python manage.py runserver
-```
-
--  Go to `http://localhost:8000/admin`
--  Enter your superuser credentials from step 7
--  In the `Authentication` app add a doctor and admin
--  **STRICTLY** Keep password field empty for all the users
-
-
-10. Populate tables
 ```sh
 python manage.py populate_treatments
 ```
@@ -85,7 +76,19 @@ python manage.py populate_treatments
 python manage.py populate_prescriptions
 ```
 
+10. Create roles
+
+```sh
+python manage.py runserver
+```
+
+- Go to `http://localhost:8000/admin`
+- Enter your superuser credentials from step 7
+- In the `Authentication` app add a doctor and admin
+- **STRICTLY** Keep password field empty for all the users
+
 ## For testing whatsapp functionality (OPTIONAL for keeping development server online)
+
 1. Run Celery worker
 
 ```sh
@@ -93,6 +96,7 @@ celery -A dentistAPI worker --loglevel=info --pool=solo
 ```
 
 2. Run Celery beat
+
 ```sh
 celery -A dentistAPI beat --scheduler django_celery_beat.schedulers.DatabaseScheduler --loglevel=info
 ```

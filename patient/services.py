@@ -315,6 +315,13 @@ def fetch_followups_by_date(date: datetime.datetime.date):
     ).filter(date=date)
     formatted_followups = []
     for followup in followups_for_date:
+        complaint_object = {
+            "complaint": followup.complaint.complaint,
+            "time": followup.complaint.time,
+            "date": followup.complaint.date,
+            "description": followup.complaint.description,
+        }
+
         formatted_followups.append(
             {
                 "name": followup.complaint.user.name,
@@ -322,12 +329,13 @@ def fetch_followups_by_date(date: datetime.datetime.date):
                 "phonenumber": followup.complaint.user.phonenumber,
                 "time": followup.time,
                 "followup": followup.title,
-                "complaint": followup.complaint.id,
+                "id": followup.complaint.id,
+                "complaint_object": complaint_object,
                 "sitting": followup.number,
             }
         )
     if not formatted_followups:
-        return ["No followups today"]
+        return []
     return formatted_followups
 
 
@@ -343,8 +351,8 @@ def fetch_followups_by_complaint(complaint_id):
         .values()
     )
     if not len(past_followups):
-        return None, "No followups present this complaint"
-    return past_followups, None
+        return []
+    return past_followups
 
 
 def is_valid_uuid(uuid_string):
@@ -395,6 +403,7 @@ def update_followup(followup_data):
     except models.FollowUp.DoesNotExist:
         "Invalid followup, it does not exist"
 
+    followup_to_update.title = followup_data["title"]
     followup_to_update.description = followup_data["description"]
     followup_to_update.date = followup_data["date"]
     followup_to_update.time = followup_data["time"]

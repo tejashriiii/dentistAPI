@@ -90,6 +90,7 @@ class FollowupSerializer(serializers.ModelSerializer):
 class FollowupUpdateSerializer(serializers.Serializer):
     """
     id: <UUID>
+    title:<String> The name of followup that patient sees
     description:<String> What the dentist ended up doing in this sitting (private)
     date: <Date> When followup is scheduled
     time: <Time> When followup is scheduled
@@ -97,6 +98,7 @@ class FollowupUpdateSerializer(serializers.Serializer):
     """
 
     id = serializers.UUIDField()
+    title = serializers.CharField()
     description = serializers.CharField()
     time = serializers.TimeField()
     date = serializers.DateField()
