@@ -9,6 +9,11 @@ from django.db import IntegrityError
 from django.db.models import F
 from django.forms.models import model_to_dict
 from rest_framework import status
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.graphics.shapes import Drawing, Line
 
 
 def capitalize_name(name, snake_case=False):
@@ -527,17 +532,22 @@ def fetch_patients_prescriptions(complaint_id, sitting):
                 "Invalid followup, no prescription found",
             )
 
-    try:
-        patient_prescription = models.PatientPrescription.objects.get(
-            complaint=complaint, sitting=sitting
+    patient_prescription = (
+        models.PatientPrescription.objects.filter(complaint=complaint, sitting=sitting)
+        .annotate(
+            prescription_name=F("prescription_id__name"),
+            prescription_type=F("prescription_id__type"),
         )
-        patient_prescription = model_to_dict(patient_prescription)
-    except models.PatientPrescription.DoesNotExist:
-        return (
-            None,
-            "Prescription is not set for this sitting",
+        .values(
+            "id",
+            "sitting",
+            "complaint",
+            "prescription_name",
+            "prescription_type",
+            "days",
+            "dosage",
         )
-
+    )
     return patient_prescription, None
 
 
@@ -592,3 +602,200 @@ def delete_patient_prescription(patient_prescription_id):
     name = patient_prescription.prescription.name
     patient_prescription.delete()
     return name, None
+
+
+def fetch_followup_and_personal_data_for_prescription_pdf(
+    complaint_id, current_sitting
+):
+    """
+    - Personal data using current followup
+    - Data for next followup
+    """
+    current_followup = models.FollowUp.objects.select_related("complaint").get(
+        complaint__id=complaint_id, number=current_sitting
+    )
+    personal = {
+        "name": current_followup.complaint.user.name,
+        "age": utils.get_age(current_followup.complaint.user.details.date_of_birth),
+        "complaint": current_followup.complaint.complaint,
+        "current_date": current_followup.date,
+    }
+
+    try:
+        followup = models.FollowUp.objects.select_related("complaint").get(
+            complaint__id=complaint_id, number=current_sitting + 1
+        )
+        followup = {
+            "followup": followup.title,
+            "next_date": followup.date,
+            "time": followup.time,
+            "sitting": followup.number,
+        }
+    except models.FollowUp.DoesNotExist:
+        return {"personal": personal, "followup": {}}
+    return {"personal": personal, "followup": followup}
+
+
+def create_pdf(response, followup_and_personal_data, prescriptions):
+    """ """
+    # Create a PDF document
+    pdf = SimpleDocTemplate(response, pagesize=A4)
+    elements = []
+
+    # Define styles
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "TitleStyle",
+        parent=styles["Heading1"],
+        textColor=colors.darkblue,
+        fontSize=20,
+        alignment=1,
+    )
+    subtitle_style = ParagraphStyle(
+        "SubtitleStyle",
+        parent=styles["Heading2"],
+        textColor=colors.darkblue,
+        fontSize=16,
+        alignment=1,
+    )
+    address_style = ParagraphStyle(
+        "AddressStyle",
+        parent=styles["BodyText"],
+        textColor=colors.darkblue,
+        fontSize=12,
+        alignment=1,
+    )
+    body_style = ParagraphStyle(
+        "BodyStyle",
+        parent=styles["BodyText"],
+        textColor=colors.black,
+        fontSize=12,
+        leading=16,
+    )
+
+    # Title
+    elements.append(Paragraph("Ojas Dental Clinic", title_style))
+    elements.append(
+        Paragraph(
+            "4G24+MQF, Hospital Rd, Panchavati Colony, Baran, Rajasthan 325205",
+            address_style,
+        )
+    )
+    elements.append(Spacer(1, 5))
+    header_divider = create_divider(440, 1, colors.darkblue)
+    elements.append(header_divider)
+    elements.append(Spacer(1, 20))
+
+    # Patient Info
+    if followup_and_personal_data:
+        elements.append(
+            Paragraph(
+                f"Patient: <b>{followup_and_personal_data.get("personal").get("name")}</b>",
+                body_style,
+            )
+        )
+        elements.append(
+            Paragraph(
+                f"Age: <b>{followup_and_personal_data.get("personal").get("age")}</b>",
+                body_style,
+            )
+        )
+        elements.append(
+            Paragraph(
+                f"Date: <b>{followup_and_personal_data.get("personal").get("current_date")}</b>",
+                body_style,
+            )
+        )
+        elements.append(Paragraph("Doctor: <b>Dr. Neha Gupta</b>", body_style))
+        elements.append(
+            Paragraph(
+                f"Complaint: <b>{followup_and_personal_data.get("personal").get("complaint")}</b>",
+                body_style,
+            )
+        )
+        elements.append(Spacer(1, 12))
+
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph("<u>Prescription</u>", subtitle_style))
+    elements.append(Spacer(1, 5))
+    # Medicines Table
+    if len(prescriptions):
+        data = [["Medication", "Dosage", "Days"]]
+        for prescription in prescriptions:
+            if prescription.get("prescription_type") == "Medication":
+                data.append(
+                    [
+                        prescription.get("prescription_name"),
+                        prescription.get("dosage"),
+                        prescription.get("days"),
+                    ]
+                )
+            else:
+                data.append([prescription.get("prescription_name"), "-", "-"])
+
+        table = Table(data, colWidths=[240, 100, 100])
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.darkblue),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                    ("BACKGROUND", (0, 1), (-1, -1), colors.lightgrey),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.lightgrey),
+                ]
+            )
+        )
+        elements.append(table)
+    else:
+        elements.append(Paragraph("No prescriptions given", address_style))
+
+    # Followup section
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph("<u>Followup</u>", subtitle_style))
+    elements.append(Spacer(1, 5))
+    if followup_and_personal_data.get("followup"):
+        followup_data = [
+            ["Sitting", "Followup", "Date", "Time"],
+            [
+                followup_and_personal_data.get("followup").get("sitting"),
+                followup_and_personal_data.get("followup").get("followup"),
+                followup_and_personal_data.get("followup").get("next_date"),
+                followup_and_personal_data.get("followup").get("time"),
+            ],
+        ]
+        table = Table(followup_data, colWidths=[40, 240, 80, 80])
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.darkblue),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                    ("BACKGROUND", (0, 1), (-1, -1), colors.lightgrey),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.lightgrey),
+                ]
+            )
+        )
+        elements.append(table)
+    else:
+        elements.append(Paragraph("No followups scheduled up next", address_style))
+    d = Drawing(150, 10)
+    d.add(Line(0, 5, 100, 5, strokeColor=colors.black, strokeWidth=1))
+
+    # Add the text below the line
+    elements.append(Spacer(1, 100))
+    elements.append(Spacer(400, 1))
+    elements.append(d)
+    elements.append(Paragraph("<b>Doctor's Signature</b>", body_style))
+
+    # Build PDF
+    pdf.build(elements)
+
+
+def create_divider(width=500, height=1, color=colors.black):
+    d = Drawing(width, height)
+    d.add(Line(0, height / 2, width, height / 2, strokeColor=color, strokeWidth=1))
+    return d

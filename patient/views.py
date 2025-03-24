@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db import IntegrityError
 import datetime
+from django.http import HttpResponse
+
 from authentication import models as auth
 import authentication.jsonwebtokens as jsonwebtokens
 import authentication.validation as validation
@@ -727,3 +729,37 @@ def prescription(
         if error:
             return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
         return Response({"success": f"Deleted prescription {name}!"})
+
+
+@api_view(["GET"])
+@permission_classes((permissions.AllowAny,))
+def pdf_prescription(request, complaint_id=None, sitting=None):
+    """
+    Generates a pdf prescription for a sitting
+    """
+
+    if request.method == "GET":
+        if not complaint_id or not sitting:
+            return Response(
+                {"error": "Couldn't print prescription"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        # get prescription data
+        prescriptions, error = services.fetch_patients_prescriptions(
+            complaint_id, sitting
+        )
+        if error:
+            return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
+
+        # get next followup
+        followup_and_personal_data = (
+            services.fetch_followup_and_personal_data_for_prescription_pdf(
+                complaint_id, sitting
+            )
+        )
+
+        response = HttpResponse(content_type="application/pdf")
+        response["Content-Disposition"] = 'inline; filename="prescription.pdf"'
+
+        services.create_pdf(response, followup_and_personal_data, prescriptions)
+        return response
