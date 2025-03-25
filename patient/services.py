@@ -9,7 +9,7 @@ from django.db import IntegrityError
 from django.db.models import F
 from django.forms.models import model_to_dict
 from rest_framework import status
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -611,15 +611,26 @@ def fetch_followup_and_personal_data_for_prescription_pdf(
     - Personal data using current followup
     - Data for next followup
     """
-    current_followup = models.FollowUp.objects.select_related("complaint").get(
-        complaint__id=complaint_id, number=current_sitting
-    )
-    personal = {
-        "name": current_followup.complaint.user.name,
-        "age": utils.get_age(current_followup.complaint.user.details.date_of_birth),
-        "complaint": current_followup.complaint.complaint,
-        "current_date": current_followup.date,
-    }
+    if current_sitting == 0:
+        current_complaint = models.Complaint.objects.get(id=complaint_id)
+        personal = {
+            "name": current_complaint.user.name,
+            "age": utils.get_age(current_complaint.user.details.date_of_birth),
+            "complaint": current_complaint.complaint,
+            "current_date": current_complaint.date,
+        }
+
+    else:
+        current_followup = models.FollowUp.objects.select_related("complaint").get(
+            complaint__id=complaint_id, number=current_sitting
+        )
+        personal = {
+            "name": current_followup.complaint.user.name,
+            "age": utils.get_age(current_followup.complaint.user.details.date_of_birth),
+            "complaint": current_followup.complaint.complaint,
+            "current_date": current_followup.date,
+        }
+    print("personal: ", personal)
 
     try:
         followup = models.FollowUp.objects.select_related("complaint").get(
@@ -639,7 +650,7 @@ def fetch_followup_and_personal_data_for_prescription_pdf(
 def create_pdf(response, followup_and_personal_data, prescriptions):
     """ """
     # Create a PDF document
-    pdf = SimpleDocTemplate(response, pagesize=A4)
+    pdf = SimpleDocTemplate(response, pagesize=letter)
     elements = []
 
     # Define styles
