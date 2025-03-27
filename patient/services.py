@@ -224,9 +224,16 @@ def fetch_medical_details(capitalized_name, phonenumber):
     if error:
         return None, error
 
+    illnesses = user_details.illnesses.split(",")
+    if not user_details.illnesses:
+        illnesses = []
+    allergies = user_details.allergies.split(",")
+    if not user_details.allergies:
+        allergies = []
+
     medical_details = {
-        "illnesses": user_details.illnesses.split(","),
-        "allergies": user_details.allergies.split(","),
+        "illnesses": illnesses,
+        "allergies": allergies,
         "smoking": user_details.smoking,
         "drinking": user_details.drinking,
         "tobacco": user_details.tobacco,
@@ -330,6 +337,7 @@ def fetch_followups_by_date(date: datetime.datetime.date):
         formatted_followups.append(
             {
                 "name": followup.complaint.user.name,
+                "patient_id": followup.complaint.user.id,
                 "age": utils.get_age(followup.complaint.user.details.date_of_birth),
                 "phonenumber": followup.complaint.user.phonenumber,
                 "time": followup.time,

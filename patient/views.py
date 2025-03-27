@@ -221,6 +221,7 @@ def complaints(request):
             complaints.append(
                 {
                     "id": complaint.id,
+                    "patient_id": complaint.user.id,
                     "name": complaint.user.name,
                     "age": utils.get_age(complaint.user.details.date_of_birth),
                     "phonenumber": complaint.user.phonenumber,
@@ -525,7 +526,7 @@ def medical_details(request, name=None, phonenumber=None):
         )
         if error:
             return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
-        return Response({"medical_detials": medical_details}, status=status.HTTP_200_OK)
+        return Response({"medical_details": medical_details}, status=status.HTTP_200_OK)
 
     if request.method == "POST":
         token, error = jsonwebtokens.is_authorized(
@@ -675,6 +676,13 @@ def prescription(
     }
     4. DELETE using user_prescription_id
     """
+    token, error = jsonwebtokens.is_authorized(
+        request.headers.get("Authorization").split(" ")[1],
+        set(["dentist"]),
+    )
+    if error:
+        return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
+
     if request.method == "GET":
         if not complaint_id or sitting is None:
             return Response(
@@ -737,6 +745,13 @@ def pdf_prescription(request, complaint_id=None, sitting=None):
     """
     Generates a pdf prescription for a sitting
     """
+
+    token, error = jsonwebtokens.is_authorized(
+        request.headers.get("Authorization").split(" ")[1],
+        set(["dentist"]),
+    )
+    if error:
+        return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
 
     if request.method == "GET":
         if not complaint_id or sitting is None:
