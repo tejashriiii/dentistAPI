@@ -5,8 +5,9 @@ from rest_framework import permissions
 from rest_framework import status
 from . import models
 from . import validation
+from . import services
 from . import jsonwebtokens
-from patient import services
+from patient import services as patient_services
 import bcrypt
 import os
 
@@ -63,7 +64,7 @@ def signup(request):
         try:
             user_object = models.User.objects.get(
                 phonenumber=serializer.data["phonenumber"],
-                name=services.capitalize_name(serializer.data["name"]),
+                name=patient_services.capitalize_name(serializer.data["name"]),
             )
         except models.User.DoesNotExist:
             return Response(
@@ -150,7 +151,7 @@ def login(request):
         try:
             stored_user = models.User.objects.get(
                 phonenumber=serializer.data["phonenumber"],
-                name=services.capitalize_name(serializer.data["name"]),
+                name=patient_services.capitalize_name(serializer.data["name"]),
             )
         except models.User.DoesNotExist:
             return Response(
@@ -175,7 +176,7 @@ def login(request):
         jwt = jsonwebtokens.create_jwt(
             role=stored_user.role,
             phonenumber=serializer.data["phonenumber"],
-            name=services.capitalize_name(serializer.data["name"]),
+            name=patient_services.capitalize_name(serializer.data["name"]),
         )
 
         return Response({"token": jwt}, status=status.HTTP_201_CREATED)
@@ -184,5 +185,57 @@ def login(request):
 # TODO: add dentist (only dentist perm)
 # TODO: add admin (only dentist perm)
 # TODO: change password endpoint
+@api_view(["POST"])
+@permission_classes((permissions.AllowAny,))
+def password_reprompt(request):
+    """
+    In case patient forgets their password, admin and doctor can reset their password
+    to be empty. Patient can then signup thereby setting a new password
+    1. POST
+    Expected JSON:
+    {
+        "name": "John Doe",
+        "phoenumber": "7777777777",
+    }
+    """
+    # JWT authentication
+    token, error = jsonwebtokens.is_authorized(
+        request.headers["Authorization"].split(" ")[1], set(["dentist", "admin"])
+    )
+    if error:
+        return Response(
+            {"error": error},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+    if request.method == "POST":
+        serialized_data, error = patient_services.serialize_identity(request.data)
+        if error:
+            return Response(
+                {"error": error},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        error, status_code = services.set_empty_password(
+            serialized_data, token.get("role")
+        )
+        if error:
+            return Response(
+                {"error": error},
+                status=status_code,
+            )
+
+        return Response(
+            {"success": "User can now signup with new password!"},
+            status=status.HTTP_200_OK,
+        )
+
+
+@api_view(["POST"])
+@permission_classes((permissions.AllowAny,))
+def change_phonenumber(request):
+    return Response(
+        {"success": "User can now signup with new password!"}, status=status.HTTP_200_OK
+    )
+
+
 # TODO: change phonenumber endpoint
 # TODO: maybe add refresh tokens

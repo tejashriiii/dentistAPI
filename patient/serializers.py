@@ -43,7 +43,7 @@ class ComplaintSerializer(serializers.Serializer):
 
 class PhoneNameSerializer(serializers.Serializer):
     """
-    phonenumber: <LongInt> Phonenumber of patient
+    phonenumber: <Int> Phonenumber of patient
     name: <String> Name of patient
     """
 

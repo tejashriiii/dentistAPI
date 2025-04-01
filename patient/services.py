@@ -514,7 +514,7 @@ def create_patient_prescription(patient_prescription_data):
     except IntegrityError:
         return (
             f"{prescription.name} is a duplicate entry cannot save it",
-            status.HTTP_404_NOT_FOUND,
+            status.HTTP_409_CONFLICT,
         )
     return None, None
 
@@ -552,6 +552,7 @@ def fetch_patients_prescriptions(complaint_id, sitting):
             "complaint",
             "prescription_name",
             "prescription_type",
+            "prescription_id",
             "days",
             "dosage",
         )
