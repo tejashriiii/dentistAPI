@@ -20,3 +20,13 @@ class CredentialSerializer(serializers.Serializer):
     name = serializers.CharField()
     phonenumber = serializers.IntegerField()
     password = serializers.CharField()
+
+
+class PhoneResetSerializer(serializers.Serializer):
+    """
+    Serializer for checking oldphone, newphone and name
+    """
+
+    name = serializers.CharField()
+    old_phonenumber = serializers.IntegerField()
+    new_phonenumber = serializers.IntegerField()

@@ -6,6 +6,7 @@ from rest_framework import status
 from . import models
 from . import validation
 from . import services
+from . import serializers
 from . import jsonwebtokens
 from patient import services as patient_services
 import bcrypt
@@ -182,9 +183,6 @@ def login(request):
         return Response({"token": jwt}, status=status.HTTP_201_CREATED)
 
 
-# TODO: add dentist (only dentist perm)
-# TODO: add admin (only dentist perm)
-# TODO: change password endpoint
 @api_view(["POST"])
 @permission_classes((permissions.AllowAny,))
 def password_reprompt(request):
@@ -232,10 +230,37 @@ def password_reprompt(request):
 @api_view(["POST"])
 @permission_classes((permissions.AllowAny,))
 def change_phonenumber(request):
-    return Response(
-        {"success": "User can now signup with new password!"}, status=status.HTTP_200_OK
+    # JWT authentication
+    token, error = jsonwebtokens.is_authorized(
+        request.headers["Authorization"].split(" ")[1], set(["dentist", "admin"])
     )
+    if error:
+        return Response(
+            {"error": error},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+    if request.method == "POST":
+        phone_reset_serializer = serializers.PhoneResetSerializer(data=request.data)
+        if not phone_reset_serializer.is_valid():
+            return Response(
+                {"error": "Invalid fields, check all fields properly"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        error, status_code = services.set_new_phonenumber(
+            phone_reset_serializer.data, token.get("role")
+        )
+        if error:
+            return Response(
+                {"error": error},
+                status=status_code,
+            )
+
+        return Response(
+            {"success": "User can now login with new phonenumber"},
+            status=status.HTTP_200_OK,
+        )
 
 
-# TODO: change phonenumber endpoint
 # TODO: maybe add refresh tokens
+# TODO: add dentist (only dentist perm)
+# TODO: add admin (only dentist perm)
