@@ -67,10 +67,12 @@ class DiagnosisUpdateSerializer(serializers.Serializer):
     """
     id: <UUID> for diagnosis
     treatment: <UUID> for treatment
+    tooth_number: <Integer>
     """
 
     treatment = serializers.UUIDField()
     id = serializers.UUIDField()
+    tooth_number = serializers.IntegerField()
 
 
 class FollowupSerializer(serializers.ModelSerializer):

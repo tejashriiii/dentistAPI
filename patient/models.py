@@ -81,8 +81,8 @@ class Diagnosis(models.Model):
         db_table = "diagnosis"
         constraints = [
             models.UniqueConstraint(
-                fields=["complaint", "tooth_number"],
-                name="unique_complaint+tooth_number",
+                fields=["complaint", "tooth_number", "treatment"],
+                name="unique_complaint+tooth_number+treatment",
             )
         ]
 

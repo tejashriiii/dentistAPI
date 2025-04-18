@@ -245,11 +245,12 @@ def fetch_diagnosis_by_complaint(complaint_id):
     diagnoses = (
         models.Diagnosis.objects.select_related("complaint")
         .filter(complaint__id=complaint_id)
-        .values()
+        .annotate(treatment_name=F("treatment_id__name"))
+        .values("id", "tooth_number", "treatment", "treatment_name")
     )
     if not len(diagnoses):
-        return None, "Invalid complaint, no diagnosis found"
-    return diagnoses, None
+        return []
+    return diagnoses
 
 
 def create_diagnosis(diagnosis_data):
@@ -257,7 +258,7 @@ def create_diagnosis(diagnosis_data):
     Create a new diagnosis entry in the database
     1. Invalid treatment UUID
     2. Invalid complaint UUID
-    3. Duplicate diagnosis (complaint+tooth should be unique)
+    3. Duplicate diagnosis (complaint+tooth+treatment should be unique)
     3. Success
     """
     try:
@@ -282,30 +283,45 @@ def create_diagnosis(diagnosis_data):
         )
     except IntegrityError:
         return (
-            f"For {diagnosis_data["tooth_number"]
-                   } Duplicate diagnosis, diagnosis for this tooth already exists",
+            f"For tooth {diagnosis_data["tooth_number"]
+                         }, {treatment.name} diagnosis already exists",
             status.HTTP_409_CONFLICT,
         )
     return None, None
 
 
 def update_diagnosis(diagnosis_update_data):
+    """
+    Update existing diagnosis entry
+    1. Invalid diagnosis UUID
+    2. Invalid treatment UUID
+    3. Duplicate diagnosis (complaint+tooth+treatment should be unique)
+    4. Success
+    """
     try:
         diagnosis_to_update = models.Diagnosis.objects.get(
             id=diagnosis_update_data["id"]
         )
     except models.Diagnosis.DoesNotExist:
-        return "Diagnosis not found"
+        return "Diagnosis not found", status.HTTP_404_NOT_FOUND
     try:
         updated_treatment = models.Treatment.objects.get(
             id=diagnosis_update_data["treatment"]
         )
     except models.Treatment.DoesNotExist:
-        return "Treatment not found"
+        return "Treatment not found", status.HTTP_404_NOT_FOUND
 
     diagnosis_to_update.treatment = updated_treatment
-    diagnosis_to_update.save()
-    return None
+    diagnosis_to_update.tooth_number = diagnosis_update_data["tooth_number"]
+    try:
+        diagnosis_to_update.save()
+    except IntegrityError:
+        return (
+            f"For tooth {diagnosis_update_data["tooth_number"]
+                         }, {updated_treatment.name} diagnosis already exists",
+            status.HTTP_409_CONFLICT,
+        )
+    return None, None
 
 
 def delete_diagnosis(diagnosis_id):
@@ -314,8 +330,9 @@ def delete_diagnosis(diagnosis_id):
     except models.Diagnosis.DoesNotExist:
         return None, "Diagnosis not found"
     tooth_number = diagnosis_to_delete.tooth_number
+    treatment = diagnosis_to_delete.treatment.name
     diagnosis_to_delete.delete()
-    return tooth_number, None
+    return tooth_number, treatment, None
 
 
 def fetch_followups_by_date(date: datetime.datetime.date):

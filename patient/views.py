@@ -294,7 +294,8 @@ def diagnosis(request, complaint_id=None, id=None):
     Expected JSON:
     {
       "treatment": "e886b9aa-1ffb-45af-9db2-86e177ef6b78",
-      "id": "e886b9aa-1ffb-45af-9db2-86e177ef6b78"
+      "id": "e886b9aa-1ffb-45af-9db2-86e177ef6b78",
+      "tooth_number": 44
     }
     4. DELETE: deleting diagnosis for a tooth
     """
@@ -307,12 +308,7 @@ def diagnosis(request, complaint_id=None, id=None):
             return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
     if request.method == "GET":
         if complaint_id:
-            diagnoses, error = services.fetch_diagnosis_by_complaint(complaint_id)
-            if error:
-                return Response(
-                    {"error": error},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
+            diagnoses = services.fetch_diagnosis_by_complaint(complaint_id)
             return Response({"diagnosis": diagnoses}, status=status.HTTP_200_OK)
 
         return Response(
@@ -338,9 +334,9 @@ def diagnosis(request, complaint_id=None, id=None):
         diagnosis_update = serializers.DiagnosisUpdateSerializer(data=request.data)
         if not diagnosis_update.is_valid():
             return Response({"error": "Invalid entry, recheck fields"})
-        error = services.update_diagnosis(diagnosis_update.data)
+        error, error_code = services.update_diagnosis(diagnosis_update.data)
         if error:
-            return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": error}, status=error_code)
         return Response({"message": "Diagnosis has been updated!"})
 
     elif request.method == "DELETE":
@@ -348,12 +344,12 @@ def diagnosis(request, complaint_id=None, id=None):
             return Response(
                 {"error": "Diagnosis was not deleted"}, status=status.HTTP_404_NOT_FOUND
             )
-        tooth_number, error = services.delete_diagnosis(id)
+        tooth_number, treatment, error = services.delete_diagnosis(id)
         if error:
             return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
         return Response(
-            {"success": f"Tooth {tooth_number}'s diagnosis deleted"},
-            status=status.HTTP_404_NOT_FOUND,
+            {"success": f"Tooth {tooth_number}'s {treatment} diagnosis deleted"},
+            status=status.HTTP_200_OK,
         )
 
 

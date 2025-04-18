@@ -168,7 +168,7 @@ WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL")
 WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 
 # Timezone for Celery
-CELERY_TIMEZONE = 'Asia/Kolkata'
+CELERY_TIMEZONE = "Asia/Kolkata"
 
 # Use JSON for Celery serialization
 # CELERY_ACCEPT_CONTENT = ['json']
@@ -177,4 +177,4 @@ CELERY_TIMEZONE = 'Asia/Kolkata'
 # PostgreSQL as the Celery Broker
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
 
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers.DatabaseScheduler'
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers.DatabaseScheduler"
