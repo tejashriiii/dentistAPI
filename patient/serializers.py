@@ -56,6 +56,7 @@ class DiagnosisSerializer(serializers.Serializer):
     treatment: <UUID> for treatment
     complaint: <UUID> for complaint
     tooth_number: <Integer>
+    price: <Integer>
     """
 
     treatment = serializers.UUIDField()
@@ -107,27 +108,13 @@ class FollowupUpdateSerializer(serializers.Serializer):
     completed = serializers.BooleanField()
 
 
-class BillSerializer(serializers.Serializer):
+class DiscountSerializer(serializers.Serializer):
     """
     complaint: <UUID> along with which bill is associated
-    full_bill: <Integer> Total amount (without discount)
     discount: <Integer> Amount of discount given by the dentist
     """
 
     complaint = serializers.UUIDField()
-    full_bill = serializers.IntegerField()
-    discount = serializers.IntegerField()
-
-
-class BillUpdateSerializer(serializers.Serializer):
-    """
-    id: <UUID> identifier for bill
-    full_bill: <Integer> Total amount (without discount)
-    discount: <Integer> Amount of discount given by the dentist
-    """
-
-    id = serializers.UUIDField()
-    full_bill = serializers.IntegerField()
     discount = serializers.IntegerField()
 
 

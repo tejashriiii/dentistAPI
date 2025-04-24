@@ -15,6 +15,11 @@ class Command(BaseCommand):
             },
             {
                 "id": uuid.uuid4(),
+                "name": "Consultation",
+                "price": 1000,
+            },
+            {
+                "id": uuid.uuid4(),
                 "name": "Mobile/Form Extraction",
                 "price": 1000,
             },

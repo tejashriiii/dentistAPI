@@ -67,15 +67,17 @@ class Complaint(models.Model):
 class Diagnosis(models.Model):
     """
     id: <UUID> (Primary key)
-    complaint: <Complaint> (Foreign Key for User)
-    tooth_number:<Int> when complaint was registered
+    complaint: <Complaint> (Foreign Key for complaint)
+    tooth_number:<Int>
     treatment: <Treatment> (Foreight Key for treatment)
+    price: <Int> price of treatment
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     complaint = models.ForeignKey(Complaint, on_delete=models.CASCADE)
-    tooth_number = models.IntegerField()
+    tooth_number = models.IntegerField(blank=True, null=True)
     treatment = models.ForeignKey(Treatment, on_delete=models.PROTECT)
+    price = models.IntegerField()
 
     class Meta:
         db_table = "diagnosis"
@@ -117,21 +119,19 @@ class FollowUp(models.Model):
         ]
 
 
-class Bill(models.Model):
+class Discount(models.Model):
     """
-    id: <UUID>
     complaint: <Complaint> along with which bill is associated
-    full_bill: <Integer> Total amount (without discount)
     discount: <Integer> Amount of discount given by the dentist
     """
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    complaint = models.OneToOneField(Complaint, on_delete=models.CASCADE)
-    full_bill = models.IntegerField()
+    complaint = models.OneToOneField(
+        Complaint, on_delete=models.CASCADE, primary_key=True
+    )
     discount = models.IntegerField()
 
     class Meta:
-        db_table = "bills"
+        db_table = "discounts"
 
 
 class PatientPrescription(models.Model):

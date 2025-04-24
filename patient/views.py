@@ -5,7 +5,7 @@ from rest_framework import status
 from django.db import IntegrityError
 import datetime
 from django.http import HttpResponse
-
+import uuid
 from authentication import models as auth
 import authentication.jsonwebtokens as jsonwebtokens
 import authentication.validation as validation
@@ -576,21 +576,18 @@ def patient_history(request, patient_id=None):
 @permission_classes((permissions.AllowAny,))
 def bills(request, complaint_id=None):
     """
-    1. GET: fetch bills for a complaint using complaint_id
-    2. POST: save bill for the first time
+    1. GET /p/bill/discount/<uuid:complain_id>: get discount if present
+    CONSULTATION GET DOES NOT EXIST, IT GETS FETCHED WITH DIAGNOSIS I.E WHY
+    2. POST /p/bill/discount: save bill for the first time
     Expected JSON:
     {
-        "complaint": "728d2379-292f-4039-8983-24895e716c77",
-        "full_bill": 5000,
+        "complaint": "728d2379-292f-4039-8983-24895e716c77"
         "discount": 1000,
-
     }
-    3. PUT: make updates to the bill if needed
+    3. POST /p/bill/consultation: save bill for the first time
     Expected JSON:
     {
-        "id": "fe48a6e0-e490-421e-bac0-eddea9478198"
-        "full_bill": 4000,
-        "discount": 1000,
+        "complaint": "728d2379-292f-4039-8983-24895e716c77"
     }
     """
 
@@ -604,46 +601,54 @@ def bills(request, complaint_id=None):
     if request.method == "GET":
         if not complaint_id:
             return Response(
-                {"error": "Can't fetch bill without knowing complaint"},
+                {"error": "Can't fetch discount without knowing complaint"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        bill, error, error_code = services.fetch_bill(complaint_id)
+        discount, error, error_code = services.fetch_discount(complaint_id)
         if error:
             return Response({"error": error}, status=error_code)
-        return Response({"bill": bill}, status=status.HTTP_200_OK)
+        return Response({"discount": discount}, status=status.HTTP_200_OK)
 
     elif request.method == "POST":
-        # serialize input
-        bills_serializer = serializers.BillSerializer(data=request.data)
-        if not bills_serializer.is_valid():
-            return Response(
-                {"error": "Invalid fields, check all fields again"},
-                status=status.HTTP_400_BAD_REQUEST,
+        if "discount" in request.data:
+            # serialize input
+            discounts_serializer = serializers.DiscountSerializer(data=request.data)
+            if not discounts_serializer.is_valid():
+                return Response(
+                    {"error": "Invalid fields, check all fields again"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            # save the record
+            error, error_code = services.create_or_update_discount(
+                discounts_serializer.data
             )
-        # save the record
-        error, error_code = services.create_bill(bills_serializer.data)
-        if error:
-            return Response({"error": error}, status=error_code)
-        return Response(
-            {"message": "Bill has been saved!"},
-            status=status.HTTP_200_OK,
-        )
+            if error:
+                return Response({"error": error}, status=error_code)
+            return Response(
+                {"success": "Discount has been saved!"},
+                status=status.HTTP_200_OK,
+            )
 
-    elif request.method == "PUT":
-        bills_update_serializer = serializers.BillUpdateSerializer(data=request.data)
-        if not bills_update_serializer.is_valid():
-            return Response(
-                {"error": "Invalid fields, check all fields again"},
-                status=status.HTTP_400_BAD_REQUEST,
+        else:
+            complaint = request.data.get("complaint")
+            if not services.is_valid_uuid(complaint):
+                return Response(
+                    {"error": "Invalid complaint!"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            error, error_code = services.add_consultation(
+                uuid.UUID(complaint, version=4)
             )
-        # save the record
-        error = services.update_bill(bills_update_serializer.data)
-        if error:
-            return Response({"error": error}, status=status.HTTP_404_NOT_FOUND)
-        return Response(
-            {"message": "Bill has been saved!"},
-            status=status.HTTP_200_OK,
-        )
+            if error:
+                return Response(
+                    {"error": error},
+                    status=error_code,
+                )
+
+            return Response(
+                {"success": "Consulation has been added!"},
+                status=status.HTTP_200_OK,
+            )
 
 
 @api_view(["GET", "POST", "PUT", "DELETE"])

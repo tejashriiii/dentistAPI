@@ -246,7 +246,7 @@ def fetch_diagnosis_by_complaint(complaint_id):
         models.Diagnosis.objects.select_related("complaint")
         .filter(complaint__id=complaint_id)
         .annotate(treatment_name=F("treatment_id__name"))
-        .values("id", "tooth_number", "treatment", "treatment_name")
+        .values("id", "tooth_number", "treatment", "treatment_name", "price")
     )
     if not len(diagnoses):
         return []
@@ -263,23 +263,22 @@ def create_diagnosis(diagnosis_data):
     """
     try:
         complaint = models.Complaint.objects.get(id=diagnosis_data["complaint"])
+        treatment = models.Treatment.objects.get(id=diagnosis_data["treatment"])
+        models.Diagnosis.objects.create(
+            complaint=complaint,
+            treatment=treatment,
+            tooth_number=diagnosis_data["tooth_number"],
+            price=treatment.price,
+        )
     except models.Complaint.DoesNotExist:
         return (
             f"For {diagnosis_data["tooth_number"]} Invalid chief-complaint",
             status.HTTP_404_NOT_FOUND,
         )
-    try:
-        treatment = models.Treatment.objects.get(id=diagnosis_data["treatment"])
     except models.Treatment.DoesNotExist:
         return (
             f"For {diagnosis_data["tooth_number"]} Invalid chief-complaint",
             status.HTTP_404_NOT_FOUND,
-        )
-    try:
-        models.Diagnosis.objects.create(
-            complaint=complaint,
-            treatment=treatment,
-            tooth_number=diagnosis_data["tooth_number"],
         )
     except IntegrityError:
         return (
@@ -302,25 +301,45 @@ def update_diagnosis(diagnosis_update_data):
         diagnosis_to_update = models.Diagnosis.objects.get(
             id=diagnosis_update_data["id"]
         )
-    except models.Diagnosis.DoesNotExist:
-        return "Diagnosis not found", status.HTTP_404_NOT_FOUND
-    try:
         updated_treatment = models.Treatment.objects.get(
             id=diagnosis_update_data["treatment"]
         )
+        diagnosis_to_update.treatment = updated_treatment
+        diagnosis_to_update.tooth_number = diagnosis_update_data["tooth_number"]
+        diagnosis_to_update.price = updated_treatment.price
+        diagnosis_to_update.save()
+    except models.Diagnosis.DoesNotExist:
+        return "Diagnosis not found", status.HTTP_404_NOT_FOUND
     except models.Treatment.DoesNotExist:
         return "Treatment not found", status.HTTP_404_NOT_FOUND
-
-    diagnosis_to_update.treatment = updated_treatment
-    diagnosis_to_update.tooth_number = diagnosis_update_data["tooth_number"]
-    try:
-        diagnosis_to_update.save()
     except IntegrityError:
         return (
             f"For tooth {diagnosis_update_data["tooth_number"]
                          }, {updated_treatment.name} diagnosis already exists",
             status.HTTP_409_CONFLICT,
         )
+    return None, None
+
+
+def add_consultation(complaint):
+    """
+    1. Valid complaint
+    2. Duplicate Consultation charge
+    3. Success
+    """
+    try:
+        complaint = models.Complaint.objects.get(id=complaint)
+        treatment = models.Treatment.objects.get(name="Consultation")
+        models.Diagnosis.objects.create(
+            complaint=complaint, treatment=treatment, price=treatment.price
+        )
+    except models.Complaint.DoesNotExist:
+        return "Invalid complaint", status.HTTP_404_NOT_FOUND
+    # except IntegrityError:
+    #    return (
+    #        "Consultation charges exist for this complaint already",
+    #        status.HTTP_409_CONFLICT,
+    #    )
     return None, None
 
 
@@ -442,59 +461,47 @@ def update_followup(followup_data):
     return None
 
 
-def create_bill(bill_data):
+def create_or_update_discount(discount_data):
     """
-    Creating bill for the very first time
+    Creating for the very first time
     1. Checks if complaint exists
-    2. Checks one-to-one relation with complaint
-    2. Success
+    2. Creates new discount if discount doesn't exist
+    3. Updates discount if it exists
     """
     try:
-        complaint = models.Complaint.objects.get(id=bill_data["complaint"])
+        complaint = models.Complaint.objects.get(id=discount_data["complaint"])
+        discount_to_update = models.Discount.objects.get(complaint=complaint)
+        discount_to_update.discount = discount_data["discount"]
+        discount_to_update.save()
     except models.Complaint.DoesNotExist:
-        return "Can't create bill, invalid complaint", status.HTTP_404_NOT_FOUND
-    try:
-        bill = models.Bill.objects.create(
+        return "Can't create discount, invalid complaint", status.HTTP_404_NOT_FOUND
+    except models.Discount.DoesNotExist:
+        models.Discount.objects.create(
             complaint=complaint,
-            full_bill=bill_data["full_bill"],
-            discount=bill_data["discount"],
+            discount=discount_data["discount"],
         )
-        bill.save()
-    except IntegrityError:
-        return "Bill already exists for this complaint", status.HTTP_409_CONFLICT
     return None, None
 
 
-def update_bill(bill_update_data):
-    """
-    Update bill's discount or diagnosis changed so bill updated
-    1. Invalid bill id
-    2. Success
-    """
-    try:
-        bill = models.Bill.objects.get(id=bill_update_data["id"])
-    except models.Bill.DoesNotExist:
-        return "Bill does not exist, cannot update"
-    bill.full_bill = bill_update_data["full_bill"]
-    bill.discount = bill_update_data["discount"]
-    bill.save()
-    return None
-
-
-def fetch_bill(complaint_id):
+def fetch_discount(complaint_id):
     """
     Fetch the bill given the complaint id
     1. Check if bill exists for complaint
     2. Success
     """
     try:
-        bill = models.Bill.objects.select_related("complaint").get(
-            complaint__id=complaint_id
+        complaint = models.Complaint.objects.get(id=complaint_id)
+        discount = models.Discount.objects.get(complaint=complaint)
+        discount = model_to_dict(discount)
+    except models.Complaint.DoesNotExist:
+        return (
+            None,
+            "Complaint doesn't exist for this complaint",
+            status.HTTP_404_NOT_FOUND,
         )
-        bill = model_to_dict(bill)
-    except models.Bill.DoesNotExist:
-        return None, "Bill doesn't exist for this complaint", status.HTTP_404_NOT_FOUND
-    return bill, None, None
+    except models.Discount.DoesNotExist:
+        return {}, None, None
+    return discount, None, None
 
 
 def create_patient_prescription(patient_prescription_data):
