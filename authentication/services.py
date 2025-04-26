@@ -1,18 +1,30 @@
 from . import models
 from . import validation
+from patient import services as patient_services
 from rest_framework import status
 
 
 def set_empty_password(userData, role):
     """
-    1. phone+name user does not exist
-    2. admin can only reset patient's password
-    3. doctor can reset patient, admin and doctor's password
+    1. incorrect phonenumber
+    2. phone+name user does not exist
+    3. admin can only reset patient's password
+    4. doctor can reset patient, admin and doctor's password
     - returns error and status
     """
+    is_valid_phonenumber: validation.FieldValidity = validation.validate_phonenumber(
+        userData.get("phonenumber")
+    )
+    if not is_valid_phonenumber["valid"]:
+        return (
+            is_valid_phonenumber["error"],
+            status.HTTP_400_BAD_REQUEST,
+        )
     try:
+
         user = models.User.objects.get(
-            name=userData.get("name"), phonenumber=userData.get("phonenumber")
+            name=patient_services.capitalize_name(userData.get("name")),
+            phonenumber=userData.get("phonenumber"),
         )
     except models.User.DoesNotExist:
         return "User does not exist", status.HTTP_404_NOT_FOUND
@@ -29,21 +41,40 @@ def set_empty_password(userData, role):
 
 def set_new_phonenumber(userData, role):
     """
-    1. Check if user is valid
-    2. Admin only reset patient's number
-    3. Validate new phonenumber
+    1. incorrect phonenumber
+    2. Check if user is valid
+    3. Admin only reset patient's number
+    4. Validate new phonenumber
     - returns error and status
     """
-    new_phone_validate = validation.validate_phonenumber(userData["new_phonenumber"])
-    if not new_phone_validate.get("valid"):
+    is_valid_phonenumber: validation.FieldValidity = validation.validate_phonenumber(
+        userData.get("old_phonenumber")
+    )
+    if not is_valid_phonenumber["valid"]:
         return (
-            f"Invalid new phone.{new_phone_validate.get("error")}",
+            is_valid_phonenumber["error"],
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    is_valid_phonenumber: validation.FieldValidity = validation.validate_phonenumber(
+        userData.get("new_phonenumber")
+    )
+    if not is_valid_phonenumber["valid"]:
+        return (
+            is_valid_phonenumber["error"],
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    if userData.get("old_phonenumber") == userData.get("new_phonenumber"):
+        return (
+            "Old and new phonenumber are same",
             status.HTTP_400_BAD_REQUEST,
         )
 
     try:
         user = models.User.objects.get(
-            name=userData.get("name"), phonenumber=userData.get("old_phonenumber")
+            name=patient_services.capitalize_name(userData.get("name")),
+            phonenumber=userData.get("old_phonenumber"),
         )
     except models.User.DoesNotExist:
         return "User does not exist", status.HTTP_404_NOT_FOUND

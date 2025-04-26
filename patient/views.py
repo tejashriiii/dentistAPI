@@ -756,7 +756,6 @@ def pdf_prescription(request, complaint_id=None, sitting=None):
 
     if request.method == "GET":
         if not complaint_id or sitting is None:
-            print("404 control here?")
             return Response(
                 {"error": "Couldn't print prescription"},
                 status=status.HTTP_404_NOT_FOUND,

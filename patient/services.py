@@ -663,7 +663,6 @@ def fetch_followup_and_personal_data_for_prescription_pdf(
             "complaint": current_followup.complaint.complaint,
             "current_date": current_followup.date,
         }
-    print("personal: ", personal)
 
     try:
         followup = models.FollowUp.objects.select_related("complaint").get(
