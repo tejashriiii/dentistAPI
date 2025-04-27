@@ -84,10 +84,11 @@ def patients(request, phonenumber=None, name=None):
     return Response({"patients": all_patients}, status=status.HTTP_200_OK)
 
 
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 @permission_classes((permissions.AllowAny,))
 def details(request):
     """
+    1. POST:
     Expected JSON
         "phonenumber": "7880589921"
         "details": {
@@ -96,14 +97,15 @@ def details(request):
             "address": "avenue street, gotham city",
             "gender": "M",
         }
-
     - create a user object first
     - create details object first
+    2. GET:
+        Returns patient details using jwt data
     """
     if request.method == "POST":
         # Make sure user is admin
         token, error = jsonwebtokens.is_authorized(
-            request.headers["Authorization"].split(" ")[1], set(["admin"])
+            request.headers["Authorization"].split(" ")[1], set(["admin", "dentist"])
         )
         if error:
             return Response(
@@ -153,6 +155,41 @@ def details(request):
         return Response(
             {"message": "Details have been registered"}, status=status.HTTP_200_OK
         )
+    elif request.method == "GET":
+        try:
+            token = request.headers["Authorization"].split(" ")[1]
+        except (KeyError, IndexError):
+            return Response(
+                {"error": "Authorization token missing"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        payload, error = jsonwebtokens.is_authorized(token, set(["patient"]))
+        if error:
+            return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if "phonenumber" not in payload:
+            return Response({"error": "Phone number not found in token"}, status=400)
+
+        try:
+            user = auth.User.objects.get(
+                phonenumber=payload["phonenumber"], name=payload["name"]
+            )
+            details = models.Details.objects.get(id=user)
+            serialized = DetailsSerializer(details)
+            return Response(
+                {
+                    "phonenumber": user.phonenumber,
+                    "name": user.name,
+                    "role": user.role,
+                    "date_of_birth": serialized.data["date_of_birth"],
+                },
+                status=200,
+            )
+        except auth.User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+        except models.Details.DoesNotExist:
+            return Response({"error": "User details not found"}, status=404)
 
 
 @api_view(["GET", "POST"])
@@ -552,18 +589,36 @@ def patient_history(request, patient_id=None):
     """
     Get list of all complaints and followups for a particular patient
     """
-    token, error = jsonwebtokens.is_authorized(
-        request.headers.get("Authorization").split(" ")[1],
-        set(["dentist", "admin"]),
-    )
-    if error:
-        return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
     if request.method == "GET":
-        if not patient_id:
-            return Response(
-                {"error": "Couldn't find patient's history"},
-                status=status.HTTP_404_NOT_FOUND,
+        if patient_id:
+            print("control went here")
+            # case where admin/doctor look for patient of their own choice
+            token, error = jsonwebtokens.is_authorized(
+                request.headers.get("Authorization").split(" ")[1],
+                set(["dentist", "admin"]),
             )
+            if error:
+                return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
+        else:
+            print("hello")
+            # case where patient sees their own history
+            token, error = jsonwebtokens.is_authorized(
+                request.headers.get("Authorization").split(" ")[1],
+                set(["patient"]),
+            )
+            if error:
+                return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                patient_id = auth.User.objects.get(
+                    name=services.capitalize_name(token["name"]),
+                    phonenumber=token["phonenumber"],
+                ).id
+            except auth.User.DoesNotExist:
+                return Response(
+                    {"error": "User not found"}, status=status.HTTP_404_NOT_FOUND
+                )
+
         patient_history, error = services.fetch_complaint_and_followup_history(
             patient_id
         )

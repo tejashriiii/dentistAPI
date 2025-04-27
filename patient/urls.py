@@ -20,6 +20,7 @@ urlpatterns = [
     path("bill/discount/", views.bills),
     path("bill/consultation/", views.bills),
     path("history/<uuid:patient_id>/", views.patient_history),
+    path("history/", views.patient_history),
     path("<int:phonenumber>/", views.patients),
     path("<str:name>/", views.patients),
     path("<int:phonenumber>/<str:name>/", views.patients),

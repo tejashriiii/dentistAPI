@@ -125,7 +125,7 @@ def fetch_complaint_and_followup_history(patient_id):
     for complaint in complaints:
         followups_by_complaint = (
             models.FollowUp.objects.filter(complaint=complaint)
-            .values("title", "date", "completed", "number")
+            .values("title", "date", "completed", "number", "time")
             .order_by("number")
         )
         complaint_details = {
