@@ -9,6 +9,7 @@ urlpatterns = [
     path("followup/", views.followups),
     path("followup/<uuid:complaint_id>/", views.followups),
     path("followup/<str:date>/", views.followups),
+    path("followup/delete/<uuid:followup_id>/", views.followups),
     path("diagnosis/", views.diagnosis),
     path("diagnosis/<uuid:complaint_id>/", views.diagnosis),
     path("diagnosis/delete/<uuid:id>/", views.diagnosis),

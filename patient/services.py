@@ -5,7 +5,7 @@ from doctor import models as doc_models
 from . import serializers
 from . import utils
 from authentication.models import User
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import F
 from django.forms.models import model_to_dict
 from rest_framework import status
@@ -459,6 +459,33 @@ def update_followup(followup_data):
     followup_to_update.completed = followup_data["completed"]
     followup_to_update.save()
     return None
+
+
+def delete_followup(followup_id):
+    """
+    - Deletes the followup using followup_id
+    - Also deletes the associated prescriptions with it
+    """
+    try:
+        with transaction.atomic():
+            followup_to_delete = models.FollowUp.objects.get(id=followup_id)
+            sitting = followup_to_delete.number
+            complaint = followup_to_delete.complaint
+            prescriptions_to_delete, error = fetch_patients_prescriptions(
+                complaint.id, sitting
+            )
+            if error:
+                return None, error, status.HTTP_404_NOT_FOUND
+            for prescription in prescriptions_to_delete:
+                id = prescription["id"]
+                name, error = delete_patient_prescription(id)
+                if error:
+                    return None, error, status.HTTP_404_NOT_FOUND
+            followup_to_delete.delete()
+
+    except models.FollowUp.DoesNotExist:
+        return None, "Invalid follwoup, it does not exist", status.HTTP_404_NOT_FOUND
+    return sitting, None, None
 
 
 def create_or_update_discount(discount_data):

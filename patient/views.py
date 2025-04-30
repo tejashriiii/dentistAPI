@@ -390,9 +390,9 @@ def diagnosis(request, complaint_id=None, id=None):
         )
 
 
-@api_view(["GET", "POST", "PUT"])
+@api_view(["GET", "POST", "PUT", "DELETE"])
 @permission_classes((permissions.AllowAny,))
-def followups(request, complaint_id=None, date=None):
+def followups(request, complaint_id=None, date=None, followup_id=None):
     """
     1. GET:
         a. Fetch all followups for that day (for admin-dentist waiting list)
@@ -420,6 +420,9 @@ def followups(request, complaint_id=None, date=None):
         "description": "performed RCT, fixed tooth 23, 12"
         "time": "14:30:00" (even if not changed, ask frontend to send)
         "date": "2025-12-13" (even if not changed, ask frontend to send)
+    4. DELETE:
+    - Delete a followup
+    - Also end up deleting the prescriptions associated with that followup
     }
     """
     if request.method == "GET":
@@ -490,6 +493,28 @@ def followups(request, complaint_id=None, date=None):
 
         return Response(
             {"success": "Followup has been updated"}, status=status.HTTP_200_OK
+        )
+    if request.method == "DELETE":
+        token, error = jsonwebtokens.is_authorized(
+            request.headers.get("Authorization").split(" ")[1],
+            set(["dentist"]),
+        )
+        if error:
+            return Response({"error": error}, status=status.HTTP_401_UNAUTHORIZED)
+        if not followup_id:
+            return Response(
+                {"error": "Invalid followup, it does not exist"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # check if followup_id is valid uuid (already checked in the URL so no need to)
+        # add function that deletes the followup and returns error and code
+        number, error, status_code = services.delete_followup(followup_id)
+        if error:
+            return Response({"error": error}, status=status_code)
+        # return success
+        return Response(
+            {"success": f"Followup no. {number} deleted successfully"},
+            status=status.HTTP_200_OK,
         )
 
 
